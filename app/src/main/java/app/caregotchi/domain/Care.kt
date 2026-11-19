@@ -31,6 +31,8 @@ data class Day(
     val wokeEarly: Boolean = false, // up before 8
     val moves: Int = 0,
     val moveMins: Int = 0,
+    val caffeine: Int = 0,          // mg of caffeine that day
+    val lateCaffeine: Boolean = false, // caffeine after 16:00
     val wholesome: Int = 0,         // meals marked wholesome
     val junk: Int = 0,              // meals marked fast food or sweets
     val veg: Boolean = false,       // vegetables or fruit eaten
@@ -114,6 +116,7 @@ class Book(
             water = water, waterNoon = ms.count { it.kind == "water" && minuteOf(it.at) < 12 * 60 },
             due = due, taken = taken, onTime = pills.count { it.late <= 60 }, slept = slept,
             bedEarly = beds.any { it in 20 * 60 until 24 * 60 }, wokeEarly = ms.any { it.kind == "wake" && minuteOf(it.at) < 8 * 60 },
+            caffeine = ms.filter { it.kind == "caf" }.sumOf { it.mins }, lateCaffeine = ms.any { it.kind == "caf" && minuteOf(it.at) >= 16 * 60 },
             moves = moves.size, moveMins = moves.sumOf { it.mins }, wholesome = eats.count { it.q == 3 }, junk = eats.count { it.q == 1 },
             veg = eats.any { "veg" in it.tags || "fruit" in it.tags }, attacks = att.size, plaid = plaid, marks = ms.size, painPill = painPill || att.any { a -> a.list(a.took).any { (it.toLongOrNull()?.let { id -> medById[id]?.pain } ?: 0) > 0 } },
             score = score)

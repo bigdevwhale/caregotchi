@@ -39,6 +39,7 @@ object Troubles {
         if (d.meals == 0 && minuteOf(at) > 11 * 60) out += "meal"
         if (d.water < b.s.waterGoal / 3 && minuteOf(at) > 13 * 60) out += "water"
         val a = b.air(dayOf(at)); if (a != null && a.max - a.min >= 6) out += "weather"
+        if (d.caffeine >= 300) out += "coffee"
         return out
     }
 }
@@ -86,6 +87,13 @@ object Detective {
         factor("still", { d -> if (d.marks > 0) d.moves == 0 else null },
             { a, t, x -> "В дни совсем без движения голова болела в $x раза чаще ($a из $t)." },
             { a, t, x -> "On days with no moving at all a spell came $x times as often ($a of $t)." })
+        factor("caffeine", { d -> if (d.marks > 0) d.caffeine >= 300 else null },
+            { a, t, x -> "В дни, когда кофеина было 300 мг и больше, приступ был в $x раза чаще ($a из $t)." },
+            { a, t, x -> "On days with 300 mg of caffeine or more a spell came $x times as often ($a of $t)." })
+        // only for those who drink coffee at all: a day without it can bring a withdrawal headache
+        if (days.count { it.caffeine > 0 } >= days.size / 2) factor("nocoffee", { d -> if (d.marks > 0) d.caffeine == 0 else null },
+            { a, t, x -> "В дни совсем без кофеина голова болела в $x раза чаще ($a из $t) – похоже на отмену." },
+            { a, t, x -> "On days with no caffeine at all a spell came $x times as often ($a of $t) – it looks like withdrawal." })
         factor("junk", { d -> if (d.meals > 0) d.junk > 0 else null },
             { a, t, x -> "После фастфуда или сладкого приступ бывал в $x раза чаще ($a из $t)." },
             { a, t, x -> "After fast food or sweets a spell came $x times as often ($a of $t)." })

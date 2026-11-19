@@ -197,6 +197,8 @@ fun talk(d: Data): String {
         n.water < .4 -> tr("Хочется пить. Стаканчик воды?", "I'm thirsty. A glass of water?")
         hr in 12..19 && t.moveMins == 0 -> tr("Может, пройдёмся? Хоть десять минут.", "A walk, maybe? Even ten minutes.")
         t.junk > 0 && !t.veg -> tr("Вкусно было! А овощей сегодня ещё не было.", "That was tasty! No vegetables yet today though.")
+        t.caffeine > 400 -> tr("Сегодня уже ${t.caffeine} мг кофеина – сердечку хватит. Может, воды?", "${t.caffeine} mg of caffeine today – that's plenty. Some water?")
+        t.lateCaffeine && hr in 16..21 -> tr("Кофе после четырёх может помешать уснуть. Я буду пить чай с ромашкой!", "Coffee after four can keep you awake. I'll have chamomile tea!")
         hr >= 22 -> tr("Зеваю… Пора бы ложиться.", "Yawn… Time for bed soon.")
         n.min > .8 -> tr("Мне хорошо! Спасибо, что заботишься о нас.", "I feel great! Thank you for looking after us.")
         else -> tr("Я тут. Как ты?", "I'm here. How are you?")
@@ -310,10 +312,17 @@ private fun Panel(d: Data, nav: Nav, onEat: () -> Unit, onWater: () -> Unit, onP
             QuickBtn(if (d.book.asleep) "icon_sunrise" else "icon_sleep", if (d.book.asleep) tr("Подъём", "Up") else tr("Отбой", "Bed"), onSleep)
         }
         Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth().lip(C.badSoft, lerpDark(C.badSoft)).clickable { if (d.open != null) nav.dark = d.open.id else nav.sheet = "bad" }.padding(vertical = 9.dp),
-            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            Art("icon_heart", Modifier.size(26.dp)); Spacer(Modifier.width(8.dp))
-            Text(if (d.open != null) openLabel(d.open) + tr(" · открыть", " · open") else tr("Мне плохо", "I feel bad"), style = T.btn.copy(color = C.bad))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            val mg = d.book.todayCare.caffeine
+            Row(Modifier.lip(C.card2, lerpDark(C.card2)).clickable { nav.sheet = "caf" }.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                Art("drink_coffee", Modifier.size(30.dp)); Spacer(Modifier.width(4.dp))
+                Text(if (mg > 0) tr("$mg мг", "$mg mg") else tr("Кофе", "Coffee"), style = T.smallB.copy(color = if (mg > 400) C.bad else C.ink))
+            }
+            Row(Modifier.weight(1f).lip(C.badSoft, lerpDark(C.badSoft)).clickable { if (d.open != null) nav.dark = d.open.id else nav.sheet = "bad" }.padding(vertical = 9.dp),
+                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Art("icon_heart", Modifier.size(26.dp)); Spacer(Modifier.width(8.dp))
+                Text(if (d.open != null) openLabel(d.open) + tr(" · открыть", " · open") else tr("Мне плохо", "I feel bad"), style = T.btn.copy(color = C.bad), maxLines = 1)
+            }
         }
     }
 }

@@ -125,6 +125,7 @@ fun Sheets(d: Data, nav: Nav) {
             }
         }
         sheet == "bp" -> BpSheet(d, nav)
+        sheet == "caf" -> CafSheet(d, nav)
         sheet == "move" -> {
             var kind by remember { mutableStateOf("walk") }
             var mins by remember { mutableIntStateOf(30) }
@@ -293,6 +294,7 @@ fun markText(m: app.caregotchi.data.Mark, d: Data): String = when (m.kind) {
     "water" -> tr("Стакан воды", "A glass of water")
     "pill" -> (d.meds.firstOrNull { it.id == m.med }?.name ?: tr("Лекарство", "Medicine")) + if (m.slot >= 0) (if (m.late <= 60) tr(" · вовремя", " · on time") else tr(" · с опозданием", " · late")) else ""
     "move" -> word(MOVES, m.sub) + " · ${m.mins} " + tr("мин", "min")
+    "caf" -> drinkName(m.sub) + " · ${m.mins} " + tr("мг", "mg")
     "bp" -> tr("Давление ${m.sys}/${m.dia}", "Blood pressure ${m.sys}/${m.dia}") + if (m.pulse > 0) tr(" · пульс ${m.pulse}", " · pulse ${m.pulse}") else ""
     "sleep" -> tr("Отбой", "Went to bed")
     "wake" -> tr("Подъём", "Got up")
@@ -453,5 +455,39 @@ private fun BpField(label: String, value: String, modifier: Modifier, onChange: 
             textStyle = T.title.copy(textAlign = TextAlign.Center, color = C.ink),
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
             cursorBrush = androidx.compose.ui.graphics.SolidColor(C.acc), modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp))
+    }
+}
+
+/** Drinks with caffeine and their usual milligrams. */
+val DRINKS = listOf(Triple("espresso", "Эспрессо" to "Espresso", 65), Triple("coffee", "Кофе" to "Coffee", 95), Triple("latte", "Латте" to "Latte", 75),
+    Triple("cappuccino", "Капучино" to "Cappuccino", 75), Triple("tea", "Чёрный чай" to "Black tea", 45), Triple("green", "Зелёный чай" to "Green tea", 30),
+    Triple("energy", "Энергетик" to "Energy drink", 80), Triple("cola", "Кола" to "Cola", 35))
+fun drinkName(id: String) = DRINKS.firstOrNull { it.first == id }?.second?.let { tr(it.first, it.second) } ?: id
+
+/** A cup of something with caffeine: pick the drink, maybe a double, and see the day's milligrams against 400. */
+@Composable
+fun CafSheet(d: Data, nav: Nav) {
+    val c = LocalContext.current.container
+    val scope = c.scope
+    val close = { nav.sheet = null }
+    var double by remember { mutableStateOf(false) }
+    val today = d.book.todayCare.caffeine
+    val cups = d.book.marksOn(today()).filter { it.kind == "caf" }.sortedBy { it.at }
+    Sheet(close) {
+        Text(tr("Кофеин", "Caffeine"), style = T.h2)
+        Text(tr("Сегодня $today мг из 400 – это примерно предел для взрослого.", "$today mg of 400 today – about an adult's limit."), style = T.small)
+        Thread((today / 400f).coerceAtMost(1f), Modifier.padding(top = 8.dp), color = if (today > 400) C.bad else Color(0xFF8A5A2E))
+        if (cups.isNotEmpty()) Text(cups.joinToString(" · ") { hhmm(minuteOf(it.at)) + " " + drinkName(it.sub).lowercase() }, style = T.tiny, modifier = Modifier.padding(top = 4.dp))
+        Spacer(Modifier.height(12.dp))
+        PicGrid(DRINKS, 4, gap = 6.dp) { (id, w, mg), mod ->
+            PicTile("drink_$id", tr(w.first, w.second) + "\n" + tr("${if (double) mg * 2 else mg} мг", "${if (double) mg * 2 else mg} mg"), false, mod, pic = 42.dp) {
+                scope.launch { c.log("caf", sub = id, mins = if (double) mg * 2 else mg) }; close()
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(14.dp)).clickable { double = !double }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.Switch(double, { double = it }, colors = androidx.compose.material3.SwitchDefaults.colors(checkedTrackColor = C.acc, checkedThumbColor = C.accInk, uncheckedTrackColor = C.card2, uncheckedBorderColor = C.line))
+            Spacer(Modifier.width(10.dp)); Text(tr("Двойная порция или большая кружка", "A double or a big mug"), style = T.bodyB)
+        }
+        if (minuteOf(System.currentTimeMillis()) >= 16 * 60) Text(tr("После четырёх кофеин может помешать сну – питомец это заметит.", "After four, caffeine may get in the way of sleep – the pet will notice."), style = T.tiny, modifier = Modifier.padding(top = 4.dp))
     }
 }

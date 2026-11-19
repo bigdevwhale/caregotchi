@@ -6,6 +6,16 @@ line "<!-- tg", then 2-4 short lines in Russian for users (what is new, what is 
 then close it like any HTML comment. The release notes carry it, and the chat bot posts those lines.
 -->
 
+## [1.2.0] - 2026-11-19
+
+### Added
+- **Caffeine.** A «Coffee» button next to «I feel bad» opens drawn drinks – espresso, coffee, latte, cappuccino, black and green tea, an energy drink, cola – each with its usual milligrams, and a double. The button shows today's milligrams; the sheet shows them against 400. After four the pet mentions sleep, and over 400 it suggests water. The detective now checks days with 300 mg or more and, for coffee drinkers, days without any (withdrawal headaches); a spell on a heavy coffee day gets «Coffee» as a likely trigger by itself. Drinks show on the day's thread. (#4)
+
+<!-- tg
+Появился кофеин: кнопка «Кофе» рядом с «Мне плохо» – эспрессо, латте, чай, энергетик и другие напитки, у каждого свои миллиграммы.
+Питомец показывает, сколько кофеина набралось за день, а сыщик проверяет, не связаны ли приступы с лишним кофе или с днями совсем без него.
+-->
+
 ## [1.1.0] - 2026-11-19
 
 ### Added

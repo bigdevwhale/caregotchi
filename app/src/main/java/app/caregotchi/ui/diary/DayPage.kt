@@ -236,5 +236,6 @@ fun markIcon(m: Mark): String = when {
     m.kind == "eat" && m.sub in listOf("breakfast", "lunch", "dinner", "snack") -> "icon_${m.sub}"
     m.kind == "move" -> app.caregotchi.ui.home.moveIcon(m.sub)
     m.kind == "bp" -> "icon_tonometer"
+    m.kind == "caf" -> "drink_${m.sub}"
     else -> icon(m.kind)
 }

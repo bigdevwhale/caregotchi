@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Pets, eggs, items, icons, pots and badges are looked up by name at run time; the shrinker must keep them. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/pet_*,@drawable/egg_*,@drawable/item_*,@drawable/icon_*,@drawable/pot_*,@drawable/badge_*,@drawable/banner_*,@drawable/room_bg" />
+    tools:keep="@drawable/pet_*,@drawable/egg_*,@drawable/item_*,@drawable/icon_*,@drawable/drink_*,@drawable/pot_*,@drawable/badge_*,@drawable/banner_*,@drawable/room_bg" />

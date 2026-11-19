@@ -47,6 +47,9 @@ object DemoSeed {
             if (!lazy && r.nextFloat() < .9f) add(Mark(at = at(day, 19 * 60 + r.nextInt(90)), kind = "eat", sub = "dinner", q = listOf(3, 2, 2, 1).random(r), tags = if (r.nextFloat() < .5f) "veg" else ""))
             if (r.nextFloat() < .35f) add(Mark(at = at(day, 16 * 60 + r.nextInt(60)), kind = "eat", sub = "snack", q = listOf(1, 1, 2, 3).random(r), tags = if (r.nextFloat() < .5f) "sweet" else "fruit"))
             repeat(if (lazy) 2 else 3 + r.nextInt(5)) { add(Mark(at = at(day, 9 * 60 + it * 110 + r.nextInt(50)), kind = "water")) }
+            // coffee in the morning, sometimes a second cup in the afternoon; a skipped coffee day now and then
+            if (r.nextFloat() < .88f) add(Mark(at = at(day, wakeMin + 20 + r.nextInt(30)), kind = "caf", sub = listOf("coffee", "latte", "cappuccino", "espresso").random(r), mins = listOf(95, 75, 75, 65).random(r)))
+            if (r.nextFloat() < .45f) add(Mark(at = at(day, 15 * 60 + r.nextInt(150)), kind = "caf", sub = listOf("coffee", "tea", "green", "cola").random(r), mins = listOf(95, 45, 30, 35).random(r)))
             if (day > t - 14) { // the last fortnight: blood pressure morning and evening
                 add(Mark(at = at(day, 8 * 60 + r.nextInt(30)), kind = "bp", sys = 118 + r.nextInt(18), dia = 74 + r.nextInt(12), pulse = 64 + r.nextInt(14)))
                 if (r.nextFloat() < .8f) add(Mark(at = at(day, 20 * 60 + r.nextInt(40)), kind = "bp", sys = 122 + r.nextInt(20), dia = 76 + r.nextInt(12), pulse = 68 + r.nextInt(14)))

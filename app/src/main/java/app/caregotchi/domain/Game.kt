@@ -102,6 +102,7 @@ object Pay {
             "pill" -> when { m.slot < 0 -> 5 to 1; m.late <= 60 -> 15 to 5; else -> 8 to 2 }
             "sleep", "wake" -> if (n < 1) 8 to 2 else 0 to 0
             "bp" -> if (n < 2) 8 to 2 else 1 to 0
+            "caf" -> if (n < 1) 2 to 0 else 0 to 0
             "move" -> if (n < 3) (10 + (m.mins / 5).coerceAtMost(10)) to (3 + (m.mins / 15).coerceAtMost(4)) else 2 to 0
             else -> 0 to 0
         }

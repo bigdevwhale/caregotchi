@@ -19,6 +19,7 @@ A little pet lives in the hollow of an old tree. You have breakfast – it eats 
 - **Food and sport without calories.** After a meal one tap says how wholesome it was and whether there were vegetables. Sport is a kind and minutes; a walk to the shop counts too.
 - **Medicine on the windowsill.** Each medicine grows in its own pot: on time it blooms, missed it wilts. The reminder comes with a «Taken» button right in the notification. A weekly pill box, the stock and a count of painkiller days.
 - **«I feel bad».** Migraine, headache, stomach, back, anxiety, allergy, blood pressure, a cold and your own troubles. For a headache the screen dims to dark red, and strength, where it hurts, symptoms and medicine can be marked almost blind. Two hours later the pet asks: «Feeling better?»
+- **Caffeine.** A «Coffee» button next to «I feel bad»: espresso, latte, tea, energy drinks and more, each with its milligrams. The detective checks whether spells follow too much coffee – or days without it.
 - **Blood pressure.** The pet reminds you to measure it morning and evening, and the upper and lower numbers and the pulse go in right from the notification – into the diary and the doctor's report.
 - **Pressure outside.** When the air pressure falls fast, the pet warns you ahead.
 - **The detective** compares days with spells and without and brings notes like «3 of 4 spells came after a night shorter than 6 hours». Keep each or strike it out.

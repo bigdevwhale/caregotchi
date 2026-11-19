@@ -24,6 +24,7 @@ GRIDS = {
                               "fruit", "protein", "sweet", "run", "gym", "yoga", "bike", "swim"]),
     "icons4": (4, 4, "icon", ["dance", "rope", "ball", "migraine", "headache", "stomach", "back", "anxiety",
                               "allergy", "tonometer", "cold", "period", "alarm", "rx", "bottle", "hourglass"]),
+    "drinks": (4, 2, "drink", ["espresso", "coffee", "latte", "cappuccino", "tea", "green", "energy", "cola"]),
     "items": (4, 4, "item", ["hammock", "rocker", "lights", "books", "fishbowl", "hotwater", "fern", "lantern",
                              "record", "clock", "tea", "painting", "plush", "musicbox", "cushions", "armchair"]),
     "badges": (4, 4, "badge", [str(i) for i in range(16)]),
@@ -31,7 +32,7 @@ GRIDS = {
     "pots2": (4, 3, "pot", [f"{h}_{s}" for h in ["rosemary", "sage", "aloe"] for s in range(4)]),
     "eggs": (4, 3, "egg", PETS),
 }
-SIZE = {"pet": 320, "icon": 128, "item": 256, "badge": 160, "pot": 200, "egg": 160}
+SIZE = {"drink": 128, "pet": 320, "icon": 128, "item": 256, "badge": 160, "pot": 200, "egg": 160}
 
 
 def key(im):

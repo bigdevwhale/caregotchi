@@ -199,6 +199,16 @@ OTHER["icons4"] = sheet("a sheet of 16 small game UI icons about feeling unwell 
     "a brown pill bottle with a white label",
     "an hourglass with golden sand",
 ])
+OTHER["drinks"] = sheet("a sheet of 8 caffeinated drinks, chunky and readable at small size, each a single object", 4, 2, [
+    "a tiny espresso cup on a saucer with dark crema",
+    "a big mug of black coffee with steam",
+    "a tall glass of latte with milk foam and layers",
+    "a cappuccino cup with foam art",
+    "a cup of black tea with a tea bag tag hanging over the rim",
+    "a cup of green tea in a small round cup",
+    "an energy drink can with a lightning bolt pattern (no letters)",
+    "a glass of cola with ice cubes and a straw",
+])
 for _k, _s in {
     "banner_sill": "a wide wooden windowsill inside a tree hollow with three small terracotta herb pots, a watering can and a pill box, morning sunlight and a soft green forest outside the window",
     "banner_diary": "a cosy wooden desk with an open diary, a folded patchwork quilt, a candle and a cup of tea, warm evening light",
