@@ -61,12 +61,12 @@ class AppContainer(context: Context) {
         Book(dao.markList(), dao.medList(), dao.attackList(), dao.airList(), s ?: settings.now(), now)
 
     /** Marks something done: works out how late a dose is, pays for it, feeds the pet, checks tasks, badges and eggs. */
-    suspend fun log(kind: String, sub: String = "", med: Long = 0, slot: Int = -1, at: Long = System.currentTimeMillis(), q: Int = 0, tags: String = "", mins: Int = 0): Reward = lock.withLock {
+    suspend fun log(kind: String, sub: String = "", med: Long = 0, slot: Int = -1, at: Long = System.currentTimeMillis(), q: Int = 0, tags: String = "", mins: Int = 0, sys: Int = 0, dia: Int = 0, pulse: Int = 0): Reward = lock.withLock {
         val s = settings.now()
         val day = dayOf(at)
         val same = dao.marksSince(startOf(day)).filter { dayOf(it.at) == day }
         val late = if (kind == "pill" && slot >= 0) (minuteOf(at) - slot).coerceAtLeast(0) else 0
-        val m0 = Mark(at = at, kind = kind, sub = sub, med = med, slot = slot, late = late, q = q, tags = tags, mins = mins)
+        val m0 = Mark(at = at, kind = kind, sub = sub, med = med, slot = slot, late = late, q = q, tags = tags, mins = mins, sys = sys, dia = dia, pulse = pulse)
         val (xp, leaves) = Pay.of(m0, same, s)
         val id = dao.insert(m0.copy(xp = xp, leaves = leaves))
         if (kind == "pill" && med > 0) dao.medList().firstOrNull { it.id == med }?.let { m -> if (m.stock > 0) dao.update(m.copy(stock = (m.stock - m.perDose).coerceAtLeast(0))) }

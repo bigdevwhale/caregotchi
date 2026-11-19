@@ -96,7 +96,7 @@ fun word(l: List<Pair<String, Pair<String, String>>>, id: String) = l.firstOrNul
 fun Sheets(d: Data, nav: Nav) {
     val sheet = nav.sheet ?: return
     val c = LocalContext.current.container
-    val scope = rememberCoroutineScope()
+    val scope = c.scope
     val close = { nav.sheet = null }
     when {
         sheet.startsWith("rate:") -> {
@@ -124,6 +124,7 @@ fun Sheets(d: Data, nav: Nav) {
                 }
             }
         }
+        sheet == "bp" -> BpSheet(d, nav)
         sheet == "move" -> {
             var kind by remember { mutableStateOf("walk") }
             var mins by remember { mutableIntStateOf(30) }
@@ -176,7 +177,7 @@ fun Sheets(d: Data, nav: Nav) {
             Spacer(Modifier.height(12.dp))
             val kinds = Troubles.all.filter { it.id != "period" || d.s.cycle } + d.s.kinds.map { Troubles.of(it) }
             PicGrid(kinds, 3) { k, mod -> PicTile("icon_${k.icon}", k.title, false, mod, pic = 54.dp) {
-                scope.launch { val id = c.startAttack(k.id); close(); if (k.dark) nav.dark = id else nav.push(Screen.AttackEdit(id)) } } }
+                if (k.id == "pressure") nav.sheet = "bp" else scope.launch { val id = c.startAttack(k.id); close(); if (k.dark) nav.dark = id else nav.push(Screen.AttackEdit(id)) } } }
             Spacer(Modifier.height(16.dp))
             val plaid = today() in d.s.plaidDays
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0x22C9B9E0)).border(1.dp, Color(0x55C9B9E0), RoundedCornerShape(16.dp))
@@ -215,7 +216,7 @@ fun Sheets(d: Data, nav: Nav) {
 @Composable
 private fun ChestBlock(d: Data, nav: Nav) {
     val c = LocalContext.current.container
-    val scope = rememberCoroutineScope()
+    val scope = c.scope
     val monday = weekStart(today())
     val good = (monday..today()).count { d.book.care(it)?.good == true }
     var loot by remember { mutableStateOf<Loot?>(null) }
@@ -258,7 +259,7 @@ private fun Reward(icon: String, label: String) {
 @Composable
 private fun NeedSheet(k: String, d: Data, nav: Nav) {
     val c = LocalContext.current.container
-    val scope = rememberCoroutineScope()
+    val scope = c.scope
     val close = { nav.sheet = null }
     val kinds = when (k) { "eat" -> listOf("eat"); "water" -> listOf("water"); "pill" -> listOf("pill"); "walk" -> listOf("move"); else -> listOf("sleep", "wake") }
     val ms = d.book.marksOn(today()).filter { it.kind in kinds }.sortedBy { it.at }
@@ -292,6 +293,7 @@ fun markText(m: app.caregotchi.data.Mark, d: Data): String = when (m.kind) {
     "water" -> tr("Стакан воды", "A glass of water")
     "pill" -> (d.meds.firstOrNull { it.id == m.med }?.name ?: tr("Лекарство", "Medicine")) + if (m.slot >= 0) (if (m.late <= 60) tr(" · вовремя", " · on time") else tr(" · с опозданием", " · late")) else ""
     "move" -> word(MOVES, m.sub) + " · ${m.mins} " + tr("мин", "min")
+    "bp" -> tr("Давление ${m.sys}/${m.dia}", "Blood pressure ${m.sys}/${m.dia}") + if (m.pulse > 0) tr(" · пульс ${m.pulse}", " · pulse ${m.pulse}") else ""
     "sleep" -> tr("Отбой", "Went to bed")
     "wake" -> tr("Подъём", "Got up")
     else -> m.kind
@@ -302,7 +304,7 @@ fun markText(m: app.caregotchi.data.Mark, d: Data): String = when (m.kind) {
 @Composable
 fun DarkRoom(id: Long, d: Data, nav: Nav) {
     val c = LocalContext.current.container
-    val scope = rememberCoroutineScope()
+    val scope = c.scope
     val a0 = d.attacks.firstOrNull { it.id == id } ?: return
     var a by remember(id) { mutableStateOf(a0) }
     fun save(x: Attack) { a = x; scope.launch { c.saveAttack(x) } }
@@ -353,7 +355,7 @@ fun DarkRoom(id: Long, d: Data, nav: Nav) {
 @Composable
 fun Inbox(d: Data) {
     val c = LocalContext.current.container
-    val scope = rememberCoroutineScope()
+    val scope = c.scope
     val key = d.s.inbox.firstOrNull { !it.startsWith("quest:") } ?: return
     val close: () -> Unit = { scope.launch { c.seen(key) } }
     val parts = key.split(':')
@@ -407,3 +409,49 @@ fun Inbox(d: Data) {
     }
 }
 
+
+/** A blood pressure reading: three big number fields filled with the last values, and the reading before to compare. */
+@Composable
+fun BpSheet(d: Data, nav: Nav) {
+    val c = LocalContext.current.container
+    val scope = c.scope
+    val close = { nav.sheet = null }
+    val last = d.marks.filter { it.kind == "bp" }.maxByOrNull { it.at }
+    var sys by remember { mutableStateOf("${last?.sys ?: 120}") }
+    var dia by remember { mutableStateOf("${last?.dia ?: 80}") }
+    var pulse by remember { mutableStateOf(last?.pulse?.takeIf { it > 0 }?.let { "$it" } ?: "") }
+    val ok = (sys.toIntOrNull() ?: 0) in 60..260 && (dia.toIntOrNull() ?: 0) in 30..180 && (pulse.isEmpty() || (pulse.toIntOrNull() ?: 0) in 30..220)
+    Sheet(close) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Art("icon_tonometer", Modifier.size(56.dp)); Spacer(Modifier.width(10.dp))
+            Column {
+                Text(tr("Давление", "Blood pressure"), style = T.h2)
+                Text(if (last != null) tr("В прошлый раз ${last.sys}/${last.dia}", "Last time ${last.sys}/${last.dia}") + (if (last.pulse > 0) tr(", пульс ${last.pulse}", ", pulse ${last.pulse}") else "") +
+                    " · " + app.caregotchi.domain.relDay(app.caregotchi.domain.dayOf(last.at)) + " " + hhmm(minuteOf(last.at)) else tr("Первое измерение", "The first reading"), style = T.small)
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            BpField(tr("Верхнее", "Systolic"), sys, Modifier.weight(1f)) { sys = it }
+            BpField(tr("Нижнее", "Diastolic"), dia, Modifier.weight(1f)) { dia = it }
+            BpField(tr("Пульс", "Pulse"), pulse, Modifier.weight(1f)) { pulse = it }
+        }
+        Text(tr("Пульс можно не заполнять.", "The pulse is optional."), style = T.tiny, modifier = Modifier.padding(top = 6.dp))
+        Btn(tr("Записать", "Save"), Modifier.fillMaxWidth().padding(top = 14.dp), enabled = ok, icon = "icon_tonometer") {
+            scope.launch { c.log("bp", sys = sys.toInt(), dia = dia.toInt(), pulse = pulse.toIntOrNull() ?: 0) }; close()
+        }
+        Ghost(tr("Мне плохо – записать приступ", "I feel bad – write down a spell"), Modifier.fillMaxWidth().padding(top = 8.dp), color = C.bad) {
+            scope.launch { val id = c.startAttack("pressure"); close(); nav.push(Screen.AttackEdit(id)) }
+        }
+    }
+}
+
+@Composable
+private fun BpField(label: String, value: String, modifier: Modifier, onChange: (String) -> Unit) {
+    Column(modifier.clip(RoundedCornerShape(16.dp)).background(C.card2).padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, style = T.tiny)
+        androidx.compose.foundation.text.BasicTextField(value, { v -> onChange(v.filter { it.isDigit() }.take(3)) }, singleLine = true,
+            textStyle = T.title.copy(textAlign = TextAlign.Center, color = C.ink),
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(C.acc), modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp))
+    }
+}

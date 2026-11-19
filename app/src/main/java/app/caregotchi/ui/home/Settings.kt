@@ -86,11 +86,11 @@ fun SettingsPage(d: Data, nav: Nav) {
     val s = d.s
     section?.let { Section(it, d, nav) { section = null }; return }
     val o = Outside.of(s.outside)
-    val onCount = listOf(s.remindMeds, s.remindMeals, s.remindWater, s.remindBed, s.reliefAsk).count { it }
+    val onCount = listOf(s.remindMeds, s.remindBp, s.remindMeals, s.remindWater, s.remindBed, s.reliefAsk).count { it }
     val items = listOf(
         Triple("day", "icon_sunrise", tr("Режим дня", "Daily rhythm") to "${hhmm(s.wake)} – ${hhmm(s.bedtime)}"),
         Triple("goals", "icon_hourglass", tr("Нормы", "Goals") to tr("${s.waterGoal} ст. · ${s.moveGoal} мин · ${s.sleepGoal} ч", "${s.waterGoal} gl · ${s.moveGoal} min · ${s.sleepGoal} h")),
-        Triple("remind", "icon_bell", tr("Напоминания", "Reminders") to tr("включено $onCount из 5", "$onCount of 5 on")),
+        Triple("remind", "icon_bell", tr("Напоминания", "Reminders") to tr("включено $onCount из 6", "$onCount of 6 on")),
         Triple("health", "icon_thermo", tr("Болячки", "Troubles") to (s.kinds.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: tr("давление, свои", "pressure, own"))),
         Triple("look", "icon_gear", tr("Вид и язык", "Look & language") to when (s.theme) { "light" -> tr("светлая", "light"); "dark" -> tr("при свече", "candlelight"); else -> tr("как в системе", "system") }),
         Triple("weather", "icon_baro", tr("Погода", "Weather") to (if (o != null && !o.temp.isNaN()) "${s.town.ifEmpty { "—" }} · %+d°".format(o.temp.toInt()) else s.town.ifEmpty { tr("город не выбран", "no town") })),
@@ -100,6 +100,7 @@ fun SettingsPage(d: Data, nav: Nav) {
     )
     Page(tr("Настройки", "Settings"), { nav.pop() }) {
         KeeperCard(d) { d.pet?.let { nav.push(Screen.PetInfo(it.id)) } }
+        NotifyStatus(Modifier.padding(top = 12.dp), quiet = true)
         Spacer(Modifier.height(14.dp))
         PicGrid(items, 3, gap = 10.dp) { (id, icon, t), mod ->
             Column(mod.shadow(3.dp, RoundedCornerShape(16.dp), ambientColor = C.shadow, spotColor = C.shadow).clip(RoundedCornerShape(16.dp)).background(C.card)
@@ -174,19 +175,28 @@ private fun Section(id: String, d: Data, nav: Nav, back: () -> Unit) {
                 }
             }
             "remind" -> {
-                val notify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
                 Text(tr("Питомец пишет в уведомлениях – прямо оттуда можно отметить «Принял».", "The pet writes in notifications – you can mark «Taken» right there."), style = T.small)
+                NotifyStatus(Modifier.padding(top = 10.dp))
                 Spacer(Modifier.height(8.dp))
                 RemindRow("icon_pill", tr("Лекарства", "Medicine"), tr("в назначенное время", "on time"), s.remindMeds) { v -> set { it.copy(remindMeds = v) } }
+                RemindRow("icon_tonometer", tr("Измерить давление", "Check blood pressure"), tr("в ${s.bpTimes.sorted().joinToString(" и ") { hhmm(it) }} – с кнопкой «Записать»", "at ${s.bpTimes.sorted().joinToString(" and ") { hhmm(it) }} – with a «Write it down» button"), s.remindBp) { v -> set { it.copy(remindBp = v) } }
+                if (s.remindBp) Row(Modifier.fillMaxWidth().padding(start = 56.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    s.bpTimes.sorted().forEachIndexed { i, t ->
+                        Row(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(C.card2).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("−", style = T.btn.copy(color = C.ink), modifier = Modifier.clip(CircleShape).clickable { set { st -> st.copy(bpTimes = st.bpTimes.sorted().toMutableList().also { l -> l[i] = (t - 30 + 1440) % 1440 }) } }.padding(horizontal = 10.dp))
+                            Text((if (i == 0) tr("утро ", "am ") else tr("вечер ", "pm ")) + hhmm(t), style = T.smallB, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                            Text("+", style = T.btn.copy(color = C.ink), modifier = Modifier.clip(CircleShape).clickable { set { st -> st.copy(bpTimes = st.bpTimes.sorted().toMutableList().also { l -> l[i] = (t + 30) % 1440 }) } }.padding(horizontal = 10.dp))
+                        }
+                    }
+                }
                 RemindRow("icon_eat", tr("Еда", "Meals"), tr("10:00, 14:00, 20:00 – если ещё не ели", "10, 14, 20 – if you haven't eaten"), s.remindMeals) { v -> set { it.copy(remindMeals = v) } }
                 RemindRow("icon_water", tr("Вода", "Water"), tr("11:00, 15:00, 18:00 – если отстаёте", "11, 15, 18 – if behind"), s.remindWater) { v -> set { it.copy(remindWater = v) } }
                 RemindRow("icon_sleep", tr("Отбой", "Bedtime"), tr("в ${hhmm((s.bedtime - 30 + 1440) % 1440)}, за полчаса до сна", "at ${hhmm((s.bedtime - 30 + 1440) % 1440)}"), s.remindBed) { v -> set { it.copy(remindBed = v) } }
                 RemindRow("icon_heart", tr("«Полегчало?»", "«Feeling better?»"), tr("через 2 часа после лекарства от приступа", "2 hours after medicine for a spell"), s.reliefAsk) { v -> set { it.copy(reliefAsk = v) } }
                 val exact = Build.VERSION.SDK_INT < 31 || ctx.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
-                if (Build.VERSION.SDK_INT >= 33 || !exact) Paper(Modifier.padding(top = 14.dp), tilt = -.5f) {
-                    Text(tr("Чтобы напоминания приходили вовремя", "So reminders come on time"), style = T.note)
-                    if (Build.VERSION.SDK_INT >= 33) Text(tr("→ Разрешить уведомления", "→ Allow notifications"), style = T.smallB.copy(color = C.rose), modifier = Modifier.clickable { notify.launch(Manifest.permission.POST_NOTIFICATIONS) }.padding(vertical = 6.dp))
-                    if (!exact) Text(tr("→ Разрешить точные будильники", "→ Allow exact alarms"), style = T.smallB.copy(color = C.rose),
+                if (!exact) Paper(Modifier.padding(top = 14.dp), tilt = -.5f) {
+                    Text(tr("Чтобы лекарства напоминались минута в минуту", "So medicine is reminded on the minute"), style = T.note)
+                    Text(tr("→ Разрешить точные будильники", "→ Allow exact alarms"), style = T.smallB.copy(color = C.rose),
                         modifier = Modifier.clickable { ctx.startActivity(Intent(AndroidSettings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${ctx.packageName}"))) }.padding(vertical = 6.dp))
                 }
             }
@@ -358,3 +368,59 @@ private fun StepCard(n: String, icon: String, title: String, sub: String, onClic
     }
 }
 
+
+/** Whether notifications really reach the user, read again each time the screen comes back (after the system settings). */
+@Composable
+fun rememberNotifyOn(): Boolean {
+    val ctx = LocalContext.current
+    var on by remember { mutableStateOf(androidx.core.app.NotificationManagerCompat.from(ctx).areNotificationsEnabled()) }
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(owner) {
+        val o = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) on = androidx.core.app.NotificationManagerCompat.from(ctx).areNotificationsEnabled() }
+        owner.lifecycle.addObserver(o)
+        onDispose { owner.lifecycle.removeObserver(o) }
+    }
+    return on
+}
+
+/** Opens the app's own notification switches in the system settings. */
+fun openNotifySettings(ctx: android.content.Context) {
+    val i = Intent(AndroidSettings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(AndroidSettings.EXTRA_APP_PACKAGE, ctx.packageName)
+    runCatching { ctx.startActivity(i) }.onFailure { ctx.startActivity(Intent(AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}"))) }
+}
+
+/**
+ * «Notifications are on ✓», or a button that turns them on: the system question first (Android 13+); when Android
+ * no longer shows it (it answers at once), or on older Android, the app's notification settings open instead.
+ * [quiet]: show nothing while they are on.
+ */
+@Composable
+fun NotifyStatus(modifier: Modifier = Modifier, quiet: Boolean = false) {
+    val ctx = LocalContext.current
+    val on = rememberNotifyOn()
+    var asked by remember { mutableStateOf(0L) }
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        // a refusal that comes back at once means Android didn't even show the question
+        if (!granted && System.currentTimeMillis() - asked < 600) openNotifySettings(ctx)
+    }
+    if (on) {
+        if (!quiet) Row(modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(C.okSoft).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Art("icon_bell", Modifier.size(26.dp)); Spacer(Modifier.width(8.dp))
+            Text(tr("Уведомления включены ✓", "Notifications are on ✓"), style = T.bodyB)
+        }
+        return
+    }
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(C.badSoft).clickable {
+        val needAsk = Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (needAsk) { asked = System.currentTimeMillis(); ask.launch(Manifest.permission.POST_NOTIFICATIONS) } else openNotifySettings(ctx)
+    }.padding(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Art("icon_bell", Modifier.size(30.dp)); Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text(tr("Уведомления выключены", "Notifications are off"), style = T.bodyB.copy(color = C.bad))
+                Text(tr("Питомец не сможет напомнить о лекарствах. Нажмите, чтобы включить.", "The pet can't remind you of your medicine. Tap to turn them on."), style = T.small)
+            }
+        }
+    }
+}

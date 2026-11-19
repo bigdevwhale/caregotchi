@@ -47,6 +47,10 @@ object DemoSeed {
             if (!lazy && r.nextFloat() < .9f) add(Mark(at = at(day, 19 * 60 + r.nextInt(90)), kind = "eat", sub = "dinner", q = listOf(3, 2, 2, 1).random(r), tags = if (r.nextFloat() < .5f) "veg" else ""))
             if (r.nextFloat() < .35f) add(Mark(at = at(day, 16 * 60 + r.nextInt(60)), kind = "eat", sub = "snack", q = listOf(1, 1, 2, 3).random(r), tags = if (r.nextFloat() < .5f) "sweet" else "fruit"))
             repeat(if (lazy) 2 else 3 + r.nextInt(5)) { add(Mark(at = at(day, 9 * 60 + it * 110 + r.nextInt(50)), kind = "water")) }
+            if (day > t - 14) { // the last fortnight: blood pressure morning and evening
+                add(Mark(at = at(day, 8 * 60 + r.nextInt(30)), kind = "bp", sys = 118 + r.nextInt(18), dia = 74 + r.nextInt(12), pulse = 64 + r.nextInt(14)))
+                if (r.nextFloat() < .8f) add(Mark(at = at(day, 20 * 60 + r.nextInt(40)), kind = "bp", sys = 122 + r.nextInt(20), dia = 76 + r.nextInt(12), pulse = 68 + r.nextInt(14)))
+            }
             if (r.nextFloat() < .6f) add(Mark(at = at(day, 17 * 60 + r.nextInt(120)), kind = "move", sub = listOf("walk", "walk", "walk", "yoga", "run", "bike", "gym").random(r), mins = listOf(15, 20, 30, 30, 40, 45, 60).random(r)))
             if (day >= from + 4) for (slot in listOf(480, 1200)) if (r.nextFloat() < .92f) add(Mark(at = at(day, slot + r.nextInt(if (r.nextFloat() < .85f) 40 else 140)), kind = "pill", med = topa, slot = slot))
             if (day >= from + 10 && r.nextFloat() < .85f) add(Mark(at = at(day, 780 + r.nextInt(50)), kind = "pill", med = mag, slot = 780))
@@ -80,7 +84,7 @@ object DemoSeed {
         c.settings.update { it.copy(onboarded = false, xp = xp, leaves = 248, leavesEver = 1240, items = setOf("lights", "painting", "plush", "lantern", "books"),
             badges = setOf("0", "4", "2", "14", "12", "5", "3"), eggsSeen = app.caregotchi.domain.Zoo.all.map { it.id }.toSet(), plaids = 2, plaidDays = setOf(t - 17),
             questDay = t, quests = Quests.deal(t, true), questsDone = emptySet(), chestWeek = weekStart(t) - 7,
-            town = if (ru) "Москва" else "Moscow", lat = 55.75, lon = 37.62, guessed = true, clues = mapOf("f:sleep" to 1),
+            remindBp = true, town = if (ru) "Москва" else "Moscow", lat = 55.75, lon = 37.62, guessed = true, clues = mapOf("f:sleep" to 1),
             outside = Outside(Weather.CLOUDY, 6.0, 1009.0, List(24) { 1009.0 - it * .4 }, now).json(), inbox = emptyList(), seen = setOf("level:$level")) }
         // what the history earned is already on the blanket: no windows on the first look
         repeat(4) { c.tick() }

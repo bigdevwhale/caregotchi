@@ -4,6 +4,7 @@
     <string name="w_eat">Ate</string>
     <string name="w_water">Water</string>
     <string name="w_pill">Medicine</string>
+    <string name="w_sleep">Bed or up</string>
     <string name="w_bad">I feel bad</string>
     <string name="w_desc">Your pet and four quick buttons</string>
 </resources>

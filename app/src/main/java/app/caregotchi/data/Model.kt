@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
  * One thing done for yourself. [kind]: eat, water, pill, sleep (went to bed), wake, move.
  * eat: [sub] is breakfast / lunch / dinner / snack; [q] how wholesome (0 not said, 1 fast food or sweets, 2 ordinary, 3 wholesome);
  * [tags] what was in it (veg, fruit, protein, sweet). move: [sub] walk / run / gym / yoga / bike / swim / dance / other, [mins] how long.
+ * bp: a blood pressure reading – [sys]/[dia] mmHg and [pulse].
  * pill: [med] is the medicine, [slot] the scheduled minute of the day it answers (-1 when taken as needed), [late] minutes after the slot.
  */
 @Entity(indices = [Index("at")])
@@ -31,6 +32,9 @@ data class Mark(
     val q: Int = 0,
     val tags: String = "",
     val mins: Int = 0,
+    @androidx.room.ColumnInfo(defaultValue = "0") val sys: Int = 0,
+    @androidx.room.ColumnInfo(defaultValue = "0") val dia: Int = 0,
+    @androidx.room.ColumnInfo(defaultValue = "0") val pulse: Int = 0,
     val xp: Int = 0,
     val leaves: Int = 0,
 )
@@ -147,7 +151,8 @@ interface Dao0 {
     @Query("DELETE FROM Air") suspend fun clearAir()
 }
 
-@Database(entities = [Mark::class, Med::class, Attack::class, Pet::class, Air::class], version = 1, exportSchema = true)
+@Database(entities = [Mark::class, Med::class, Attack::class, Pet::class, Air::class], version = 2, exportSchema = true,
+    autoMigrations = [androidx.room.AutoMigration(from = 1, to = 2)])
 abstract class Db : RoomDatabase() {
     abstract fun dao(): Dao0
 

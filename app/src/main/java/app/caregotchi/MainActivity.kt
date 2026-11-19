@@ -43,11 +43,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); read(intent) }
 
-    /** The widget, the notifications and demo intents say where to open: `--es open bad|pill|quests|tab:N|med:ID|day:D|...` */
+    /** The widget, the notifications and demo intents say where to open: `--es open bad|pill|quests|tab:N|med:ID|day:D|sheet:bp|...` */
     private fun read(i: Intent?) {
         i ?: return
         if (i.hasExtra("tab")) Start.tab = i.getIntExtra("tab", 2)
         i.getStringExtra("open")?.takeIf { it.isNotEmpty() }?.let { Start.open = it; i.removeExtra("open") }
+        // demo builds: `--ei remindAt <minute>` rings the reminders due at that minute of today, to check them without waiting
+        if (BuildConfig.DEMO) i.getIntExtra("remindAt", -1).takeIf { it >= 0 }?.let { m ->
+            sendBroadcast(Intent(this, app.caregotchi.work.RemindReceiver::class.java).putExtra("at", app.caregotchi.domain.startOf(app.caregotchi.domain.today()) + m * 60_000L))
+            i.removeExtra("remindAt")
+        }
     }
 }
 

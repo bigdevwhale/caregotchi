@@ -109,7 +109,7 @@ fun DiaryScreen(d: Data, nav: Nav) {
     }
 }
 
-fun icon(kind: String) = when (kind) { "eat" -> "icon_eat"; "water" -> "icon_water"; "pill" -> "icon_pill"; "move" -> "icon_walk"; "sleep" -> "icon_sleep"; "wake" -> "icon_sunrise"; else -> "icon_star" }
+fun icon(kind: String) = when (kind) { "eat" -> "icon_eat"; "water" -> "icon_water"; "pill" -> "icon_pill"; "move" -> "icon_walk"; "sleep" -> "icon_sleep"; "wake" -> "icon_sunrise"; "bp" -> "icon_tonometer"; else -> "icon_star" }
 
 @Composable
 private fun Line(time: String, icon: String, text: String, onClick: () -> Unit) {

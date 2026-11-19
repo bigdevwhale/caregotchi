@@ -100,6 +100,18 @@ object Report {
                 (if (rated.isNotEmpty()) tr(", помогло ${rated.count { it.relief == 3 }} из ${rated.size}", ", helped ${rated.count { it.relief == 3 }} of ${rated.size}") else ""))
         }
         y += 8
+        val bp = d.marks.filter { it.kind == "bp" && dayOf(it.at) in from..to }.sortedByDescending { it.at }
+        if (bp.isNotEmpty()) {
+            line(tr("Давление", "Blood pressure"), h, 17f)
+            fun avg(l: List<app.caregotchi.data.Mark>) = if (l.isEmpty()) "–" else "${l.map { it.sys }.average().toInt()}/${l.map { it.dia }.average().toInt()}" +
+                (l.filter { it.pulse > 0 }.takeIf { it.isNotEmpty() }?.let { tr(", пульс ${it.map { m -> m.pulse }.average().toInt()}", ", pulse ${it.map { m -> m.pulse }.average().toInt()}") } ?: "")
+            val am = bp.filter { minuteOf(it.at) < 14 * 60 }; val pm = bp.filter { minuteOf(it.at) >= 14 * 60 }
+            line(tr("Измерений ${bp.size}. В среднем утром ${avg(am)}, вечером ${avg(pm)}.", "${bp.size} readings. On average ${avg(am)} in the morning, ${avg(pm)} in the evening."))
+            line(tr("Дата       Время   Давление   Пульс", "Date       Time    Pressure   Pulse"), grey)
+            bp.take(40).forEach { m -> line("${LocalDate.ofEpochDay(dayOf(m.at))}  ${hhmm(minuteOf(m.at)).padStart(5)}   ${"${m.sys}/${m.dia}".padEnd(10)} ${if (m.pulse > 0) m.pulse else "–"}", p, 13f) }
+            if (bp.size > 40) line(tr("…и ещё ${bp.size - 40} измерений раньше.", "…and ${bp.size - 40} earlier readings."), grey)
+            y += 8
+        }
         line(tr("Приступы", "Spells"), h, 17f)
         line(tr("Дата       Время   Длит.      Сила  Что               Принято / помогло", "Date       Time    Length     Str.  What              Taken / helped"), grey)
         spells.reversed().forEach { a -> line(row(a, d), p, 13f) }

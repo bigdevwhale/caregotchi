@@ -6,6 +6,23 @@ line "<!-- tg", then 2-4 short lines in Russian for users (what is new, what is 
 then close it like any HTML comment. The release notes carry it, and the chat bot posts those lines.
 -->
 
+## [1.1.0] - 2026-11-19
+
+### Added
+- **Blood pressure, morning and evening.** A reminder at two times you choose (8:00 and 20:00 by default) with a «Write it down» button, and a sheet for the upper and lower numbers and the pulse, filled with the last reading. Readings show on the day's thread and go into the doctor's PDF with morning and evening averages. «I feel bad» → «Blood pressure» opens the same sheet. (#2)
+- **A bed / wake-up button on the widget.** It shows a moon in the evening and a sun in the morning, like the one in the hollow. (#3)
+
+### Fixed
+- **«Allow notifications» did nothing.** The app now shows whether notifications are really on. When they are off, the button asks Android, and when Android no longer shows its question, it opens the app's notification settings. A warning appears in Settings while notifications are off. (#1)
+- **A meal rating, a workout or a pill picked in a sheet could be lost** when the sheet closed before it was saved.
+
+<!-- tg
+Можно записывать давление: утром и вечером питомец напомнит измерить, а в шторке остаётся ввести верхнее, нижнее и пульс. Измерения видны в дневнике и попадают в отчёт для врача.
+На виджете появилась кнопка «Отбой / Подъём».
+Кнопка «Разрешить уведомления» теперь работает: если Android больше не спрашивает, откроются настройки уведомлений.
+Исправлено: оценка еды, тренировка или таблетка из шторки иногда не сохранялись.
+-->
+
 ## [1.0.0] - 2026-11-19
 
 First release.

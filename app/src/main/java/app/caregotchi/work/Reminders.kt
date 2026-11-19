@@ -61,6 +61,7 @@ object Reminders {
         if (s.remindMeals) { daily(10 * 60); daily(14 * 60); daily(20 * 60) }
         if (s.remindWater) { daily(11 * 60); daily(15 * 60); daily(18 * 60) }
         if (s.remindBed) daily((s.bedtime - 30 + 1440) % 1440)
+        if (s.remindBp) s.bpTimes.forEach { daily(it) }
         val next = times.filter { it > now + 30_000 }.minOrNull() ?: return
         set(ctx, next, pi(ctx, 1, Intent(ctx, RemindReceiver::class.java).putExtra("at", next)))
     }
@@ -117,6 +118,10 @@ class RemindReceiver : BroadcastReceiver() {
             Reminders.post(ctx, 21, Reminders.CH_CARE, tr("Стаканчик воды?", "A glass of water?"), tr("Сегодня выпито ${d.water} из ${s.waterGoal}.", "${d.water} of ${s.waterGoal} today."), listOf(tr("Выпил{|а}", "Drank").let(::g) to waterPI))
         if (s.remindBed && min == (s.bedtime - 30 + 1440) % 1440)
             Reminders.post(ctx, 22, Reminders.CH_CARE, tr("$pet зевает", "$pet is yawning"), tr("Через полчаса отбой. Отложим телефон?", "Bedtime in half an hour. Phone away?"))
+        if (s.remindBp && min in s.bpTimes && b.marks.none { it.kind == "bp" && at - it.at < 3 * 3600_000L })
+            Reminders.post(ctx, 23, Reminders.CH_CARE, tr("Пора измерить давление", "Time to check your blood pressure"),
+                tr("Измерьте и запишите – $pet всё сохранит.", "Measure it and write it down – $pet will keep it."),
+                listOf(tr("Записать", "Write it down") to Reminders.open(ctx, "sheet:bp")), open = "sheet:bp")
         Reminders.schedule(ctx)
     }
 }
@@ -151,6 +156,7 @@ class ActionReceiver : BroadcastReceiver() {
             }
             "eat" -> { c.log("eat", sub = mealNow()); NotificationManagerCompat.from(ctx).cancel(20) }
             "water" -> { c.log("water"); NotificationManagerCompat.from(ctx).cancel(21) }
+            "sleep" -> c.log(if (c.book().asleep) "wake" else "sleep")
             "relief" -> {
                 val id = intent.getLongExtra("id", 0)
                 c.dao.attack(id)?.let { c.dao.update(it.copy(relief = intent.getIntExtra("v", 0), end = if (intent.getIntExtra("v", 0) == 3 && it.end == 0L) System.currentTimeMillis() else it.end)) }

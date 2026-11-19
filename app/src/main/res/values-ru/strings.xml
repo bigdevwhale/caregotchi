@@ -4,6 +4,7 @@
     <string name="w_eat">Поел</string>
     <string name="w_water">Вода</string>
     <string name="w_pill">Лекарство</string>
+    <string name="w_sleep">Отбой или подъём</string>
     <string name="w_bad">Мне плохо</string>
     <string name="w_desc">Питомец и четыре быстрые кнопки</string>
 </resources>

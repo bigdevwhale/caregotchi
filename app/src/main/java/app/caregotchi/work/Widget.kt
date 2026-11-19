@@ -60,6 +60,9 @@ object Widget {
                 v.setOnClickPendingIntent(R.id.eat, act(1, "eat"))
                 v.setOnClickPendingIntent(R.id.water, act(2, "water"))
                 v.setOnClickPendingIntent(R.id.pill, if (b.dosesLeft().isNotEmpty()) act(3, "pill") else Reminders.open(app, "pill"))
+                // bed at night, up in the morning: the button follows whether the pet is asleep
+                v.setImageViewResource(R.id.sleep, if (b.asleep) R.drawable.icon_sunrise else R.drawable.icon_sleep)
+                v.setOnClickPendingIntent(R.id.sleep, act(4, "sleep"))
                 v.setOnClickPendingIntent(R.id.bad, Reminders.open(app, "bad"))
                 v.setOnClickPendingIntent(R.id.pet, Reminders.open(app, ""))
                 mgr.updateAppWidget(ids, v)
