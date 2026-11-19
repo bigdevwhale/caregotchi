@@ -33,7 +33,7 @@ fun Book.stats(): Stats {
         onTime = marks.count { it.kind == "pill" && it.slot >= 0 && it.late <= 60 },
         goodNights = ds.count { it.slept >= s.sleepGoal - 1 }, waterDays = ds.count { it.water >= s.waterGoal },
         allDosesDays = ds.count { it.due > 0 && it.taken >= it.due }, recoveries = h.recoveries, bedRecoveries = h.bedRecoveries,
-        streak = streak, bestStreak = best, earlyBeds = ds.count { it.bedEarly }, attacks = attacks.size, moves = ds.sumOf { it.moves }, moveDays = ds.count { it.moveMins >= s.moveGoal },
+        streak = streak, bestStreak = best, earlyBeds = ds.count { it.bedEarly }, attacks = spells.size, moves = ds.sumOf { it.moves }, moveDays = ds.count { it.moveMins >= s.moveGoal },
         wholesome = ds.sumOf { it.wholesome }, vegDays = ds.count { it.veg },
         earlyWakes = ds.count { it.wokeEarly }, goodDays = ds.count { it.good },
         winterGood = ds.count { it.good && java.time.LocalDate.ofEpochDay(it.day).monthValue in listOf(12, 1, 2) },

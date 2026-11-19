@@ -1,6 +1,7 @@
 package app.caregotchi.domain
 
 import app.caregotchi.data.Attack
+import app.caregotchi.data.Settings
 import java.time.LocalDate
 
 /** A kind of bad spell. [dark]: it gets the dimmed screen with big buttons (heads hurt in the light). */
@@ -18,8 +19,11 @@ object Troubles {
         Trouble("allergy", "Аллергия", "Allergy", "allergy"),
         Trouble("pressure", "Давление", "Blood pressure", "tonometer"),
         Trouble("cold", "Простуда", "A cold", "cold"),
-        Trouble("period", "Месячные", "Period", "period"),
+        Trouble("insomnia", "Бессонница", "Insomnia", "sleep"),
+        Trouble(PERIOD, "Месячные", "Period", "period"),
     )
+    /** What «I feel bad» offers: the built-in troubles and one's own. The period is apart – it's a state, not a spell. */
+    fun kinds(s: Settings) = all.filter { it.id != PERIOD } + s.kinds.map { of(it) }
     fun of(id: String) = all.firstOrNull { it.id == id } ?: Trouble(id, id, id, "thermo")
     fun title(id: String) = of(id).title
 
@@ -40,6 +44,8 @@ object Troubles {
         if (d.water < b.s.waterGoal / 3 && minuteOf(at) > 13 * 60) out += "water"
         val a = b.air(dayOf(at)); if (a != null && a.max - a.min >= 6) out += "weather"
         if (d.caffeine >= 300) out += "coffee"
+        val day = dayOf(at)
+        if (d.period || b.nextPeriod?.let { it - day in 0..2 } == true) out += "cycle"
         return out
     }
 }
@@ -97,6 +103,10 @@ object Detective {
         factor("junk", { d -> if (d.meals > 0) d.junk > 0 else null },
             { a, t, x -> "После фастфуда или сладкого приступ бывал в $x раза чаще ($a из $t)." },
             { a, t, x -> "After fast food or sweets a spell came $x times as often ($a of $t)." })
+        // around the period: two days before it and its days (menstrual migraine)
+        if (b.periods.size >= 2) factor("cycle", { d -> if (d.cycleDay > 0 || d.toNext > 0) d.period || d.toNext in 1..2 else null },
+            { a, t, x -> "Около месячных (за пару дней и во время) приступ был в $x раза чаще ($a из $t)." },
+            { a, t, x -> "Around the period (two days before and during it) a spell came $x times as often ($a of $t)." })
         factor("air", { d -> b.air(d.day)?.let { it.max - it.min >= 6 } },
             { a, t, x -> "Когда давление скакало на 6 гПа и больше, приступ был в $x раза чаще ($a из $t)." },
             { a, t, x -> "When the pressure swung by 6 hPa or more a spell came $x times as often ($a of $t)." })
@@ -107,8 +117,9 @@ object Detective {
             val n = ds.count { it.attacks > 0 }
             if (n >= 3 && n / ds.size.toDouble() >= 2 * avg) out += Clue("w:$dow", tr("Чаще всего голова болит по ${dowRu(dow)}: $n раз.", "Most spells come on ${dowEn(dow)}s: $n of them."), n / ds.size / avg)
         }
+        if (b.periods.size >= 2) out += cycle(b, days)
         // what helped
-        val rated = b.attacks.filter { it.relief > 0 }
+        val rated = b.spells.filter { it.relief > 0 }
         rated.flatMap { a -> a.list(a.took).map { it to a.relief } }.groupBy({ it.first }, { it.second }).forEach { (k, rs) ->
             if (rs.size < 3) return@forEach
             val name = k.toLongOrNull()?.let { b.medById[it]?.name } ?: k
@@ -117,6 +128,39 @@ object Detective {
                 "«$name» helped $yes of ${rs.size} times" + (if (some > 0) ", a little $some more." else ".")), yes / rs.size.toDouble() + 1)
         }
         return out.sortedByDescending { it.strength }
+    }
+
+    /**
+     * Which trouble keeps to a part of the cycle: a few days before the period, its first day, or the days of it.
+     * «Insomnia: 4 of 5 times in the 3 days before the period, about 6 h.»
+     */
+    private fun cycle(b: Book, days: List<Day>): List<Clue> {
+        val known = days.filter { it.cycleDay > 0 || it.toNext > 0 }
+        if (known.size < 20) return emptyList()
+        val phases = listOf(
+            Triple("before", { d: Day -> d.toNext in 1..3 }, tr("за 1–3 дня до месячных", "in the 3 days before the period")),
+            Triple("first", { d: Day -> d.cycleDay == 1 }, tr("в первый день месячных", "on the period's first day")),
+            Triple("during", { d: Day -> d.period }, tr("во время месячных", "during the period")))
+        val out = mutableListOf<Clue>()
+        val kinds = known.flatMap { d -> b.attacksOn(d.day).map { it.kind } }.distinct()
+        for (k in kinds) {
+            val hit = known.filter { d -> b.attacksOn(d.day).any { it.kind == k } }
+            if (hit.size < 3) continue
+            // the narrowest phase that holds at least half of them and is twice as likely as the rest of the cycle
+            for ((id, test, words) in phases.sortedBy { (_, t, _) -> known.count(t) }) {
+                val inside = known.filter(test); if (inside.isEmpty() || inside.size == known.size) continue
+                val n = hit.count(test)
+                val r1 = n / inside.size.toDouble(); val r0 = (hit.size - n) / (known.size - inside.size).toDouble()
+                if (n < 2 || n * 2 < hit.size || r1 < 2 * r0) continue
+                val spells = hit.filter(test).flatMap { d -> b.attacksOn(d.day).filter { it.kind == k && it.end > it.start } }
+                val hours = spells.takeIf { it.isNotEmpty() }?.map { (it.end - it.start) / 3600_000.0 }?.average()
+                val long = hours?.takeIf { it >= 1 }?.let { tr(", обычно около ${fmt(Math.round(it).toInt())} ч", ", usually about ${Math.round(it)} h") } ?: ""
+                out += Clue("c:$k:$id", tr("${Troubles.title(k)}: $n из ${hit.size} раз – $words$long.", "${Troubles.title(k)}: $n of ${hit.size} times $words$long."),
+                    if (r0 == 0.0) 3.0 else r1 / r0)
+                break
+            }
+        }
+        return out
     }
 
     private fun dowRu(d: Int) = listOf("понедельникам", "вторникам", "средам", "четвергам", "пятницам", "субботам", "воскресеньям")[d - 1]

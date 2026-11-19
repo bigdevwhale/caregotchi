@@ -50,7 +50,7 @@ class RenderScreens {
         runBlocking { DemoSeed.seedIfEmpty(c, awake = true) }
         val meds = runBlocking { c.dao.medList() }
         val pets = runBlocking { c.dao.petList() }
-        val attack = runBlocking { c.dao.attackList().first() }
+        val attack = runBlocking { c.dao.attackList().first { it.kind != app.caregotchi.domain.PERIOD } }
         val meal = runBlocking { c.dao.markList().first { it.kind == "eat" } }
         var open = 0L
         val shots = listOf(
@@ -58,6 +58,8 @@ class RenderScreens {
             "6-rate" to (2 to "sheet:rate:${meal.id}"), "7-move" to (2 to "sheet:move"), "8-pill" to (2 to "pill"), "9-bad" to (2 to "bad"), "10-quests" to (2 to "quests"),
             "11-need-eat" to (2 to "sheet:need:eat"), "12-dark" to (2 to "dark"), "13-med" to (0 to "med:${meds.first().id}"), "14-day" to (1 to "day:${app.caregotchi.domain.today() - 1}"),
             "15-attack" to (1 to "attack:${attack.id}"), "16-pet" to (3 to "pet:${pets.first().id}"), "17-settings" to (2 to "settings"), "18-chest" to (2 to "sheet:chest"),
+            "20-mark" to (1 to "sheet:mark:${meal.id}"), "21-add" to (1 to "sheet:add:${app.caregotchi.domain.today() - 1}"), "22-period" to (2 to "sheet:period"),
+            "23-med-food" to (0 to "med:${meds.first { it.food > 0 }.id}"), "24-period-page" to (1 to "attack:${runBlocking { c.dao.attackList() }.first { it.kind == app.caregotchi.domain.PERIOD }.id}"),
         )
         var i by mutableIntStateOf(-1)
         rule.mainClock.autoAdvance = false

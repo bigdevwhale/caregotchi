@@ -10,6 +10,9 @@ import java.time.LocalDate
 import kotlin.math.max
 import kotlin.math.min
 
+/** The trouble kind kept as the period: a span of days, not a bad spell. */
+const val PERIOD = "period"
+
 /** Minute of the day a moment falls on. */
 fun minuteOf(ms: Long): Int = Instant.ofEpochMilli(ms).atZone(zone).let { it.hour * 60 + it.minute }
 fun startOf(day: Long): Long = LocalDate.ofEpochDay(day).atStartOfDay(zone).toInstant().toEpochMilli()
@@ -36,7 +39,10 @@ data class Day(
     val wholesome: Int = 0,         // meals marked wholesome
     val junk: Int = 0,              // meals marked fast food or sweets
     val veg: Boolean = false,       // vegetables or fruit eaten
-    val attacks: Int = 0,
+    val attacks: Int = 0,           // bad spells begun that day (the period is not one)
+    val period: Boolean = false,    // a day of the period
+    val cycleDay: Int = 0,          // the day of the cycle, 1 on the period's first day; 0 unknown
+    val toNext: Int = 0,            // days left until the next period began (past days only); 0 unknown
     val plaid: Boolean = false,
     val marks: Int = 0,
     val painPill: Boolean = false,
@@ -64,7 +70,24 @@ class Book(
     val today = dayOf(now)
     val nowMin = minuteOf(now)
     private val byDay: Map<Long, List<Mark>> = marks.groupBy { dayOf(it.at) }
-    private val attacksByDay: Map<Long, List<Attack>> = attacks.groupBy { dayOf(it.start) }
+    /** The bad spells; the period is kept apart – it is a state, not a spell. */
+    val spells: List<Attack> = attacks.filter { it.kind != PERIOD }
+    /** Periods, the first first. */
+    val periods: List<Attack> = attacks.filter { it.kind == PERIOD }.sortedBy { it.start }
+    private val attacksByDay: Map<Long, List<Attack>> = spells.groupBy { dayOf(it.start) }
+    private val periodStarts: List<Long> = periods.map { dayOf(it.start) }.distinct()
+
+    /** The period's last day: its end, or while it isn't ended, up to today but no more than a week. */
+    fun periodLast(p: Attack): Long = if (p.end > 0) dayOf(p.end) else minOf(today, dayOf(p.start) + 6)
+    fun onPeriod(day: Long): Boolean = periods.any { day in dayOf(it.start)..periodLast(it) }
+    /** The period going on today, if any. */
+    val periodNow: Attack? get() = periods.lastOrNull { today in dayOf(it.start)..periodLast(it) }
+    /** Day of the cycle, 1 on the first day of the period; 0 before the first period written down. */
+    fun cycleDay(day: Long): Int = periodStarts.lastOrNull { it <= day }?.let { (day - it + 1).toInt() } ?: 0
+    /** Lengths of the cycles written down whole (15 to 60 days – anything else is a gap in the notes). */
+    val cycles: List<Int> get() = periodStarts.zipWithNext { a, b -> (b - a).toInt() }.filter { it in 15..60 }
+    /** The day the next period is likely to begin, from the average cycle; null with no whole cycle yet. */
+    val nextPeriod: Long? get() = cycles.takeIf { it.isNotEmpty() }?.let { c -> periodStarts.last() + c.takeLast(6).average().toLong() }
     val first: Long = listOfNotNull(marks.minOfOrNull { dayOf(it.at) }, attacks.minOfOrNull { dayOf(it.start) }).minOrNull() ?: today
     val medById = meds.associateBy { it.id }
 
@@ -97,6 +120,7 @@ class Book(
         val beds = ms.filter { it.kind == "sleep" }.map { minuteOf(it.at) }
         val plaid = day in s.plaidDays
         val att = attacksByDay[day].orEmpty()
+        val next = periodStarts.firstOrNull { it > day }
         val painPill = ms.any { it.kind == "pill" && (medById[it.med]?.pain ?: 0) > 0 }
         val moves = ms.filter { it.kind == "move" }
         val rated = eats.filter { it.q > 0 }
@@ -118,7 +142,7 @@ class Book(
             bedEarly = beds.any { it in 20 * 60 until 24 * 60 }, wokeEarly = ms.any { it.kind == "wake" && minuteOf(it.at) < 8 * 60 },
             caffeine = ms.filter { it.kind == "caf" }.sumOf { it.mins }, lateCaffeine = ms.any { it.kind == "caf" && minuteOf(it.at) >= 16 * 60 },
             moves = moves.size, moveMins = moves.sumOf { it.mins }, wholesome = eats.count { it.q == 3 }, junk = eats.count { it.q == 1 },
-            veg = eats.any { "veg" in it.tags || "fruit" in it.tags }, attacks = att.size, plaid = plaid, marks = ms.size, painPill = painPill || att.any { a -> a.list(a.took).any { (it.toLongOrNull()?.let { id -> medById[id]?.pain } ?: 0) > 0 } },
+            veg = eats.any { "veg" in it.tags || "fruit" in it.tags }, attacks = att.size, period = onPeriod(day), cycleDay = cycleDay(day), toNext = next?.let { (it - day).toInt() }?.takeIf { it <= 60 } ?: 0, plaid = plaid, marks = ms.size, painPill = painPill || att.any { a -> a.list(a.took).any { (it.toLongOrNull()?.let { id -> medById[id]?.pain } ?: 0) > 0 } },
             score = score)
     }
 
@@ -209,7 +233,7 @@ class Book(
 
     /** How a medicine grows on the windowsill: 0 sprout .. 2 in bloom, 3 wilting; from the last fortnight. */
     fun potStage(m: Med): Int {
-        if (m.asNeeded) return if (attacks.isEmpty()) 0 else 1
+        if (m.asNeeded) return if (spells.isEmpty()) 0 else 1
         var due = 0; var took = 0
         val from = max(first, today - 13)
         for (d in from..today) {

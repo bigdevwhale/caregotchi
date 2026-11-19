@@ -94,7 +94,7 @@ object DiaryTab { var tab by mutableIntStateOf(0) }
 @Composable
 fun DiaryScreen(d: Data, nav: Nav) {
     val now = LocalDate.ofEpochDay(today())
-    val spells = d.attacks.count { LocalDate.ofEpochDay(app.caregotchi.domain.dayOf(it.start)).let { x -> x.month == now.month && x.year == now.year } }
+    val spells = d.book.spells.count { LocalDate.ofEpochDay(app.caregotchi.domain.dayOf(it.start)).let { x -> x.month == now.month && x.year == now.year } }
     val good = d.book.days.count { LocalDate.ofEpochDay(it.day).let { x -> x.month == now.month && x.year == now.year } && it.good }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Banner("banner_diary", tr("Дневник", "Diary"), tr("${monthName(now.monthValue).replaceFirstChar { it.uppercase() }} · приступов $spells · хороших дней $good",
@@ -144,9 +144,9 @@ private fun Board(d: Data, nav: Nav) {
         }
     }
     Btn(tr("Отчёт для врача (PDF)", "Report for the doctor (PDF)"), Modifier.fillMaxWidth().padding(top = 12.dp), icon = "icon_doctor") { scope.launch { Report.share(ctx, d) } }
-    Section(tr("Последние приступы", "Latest spells"), aside = tr("всего ${d.attacks.size}", "${d.attacks.size} in all"))
-    if (d.attacks.isEmpty()) Text(tr("Ни одного – и хорошо.", "None – good."), style = T.small)
-    d.attacks.take(6).forEach { a ->
+    Section(tr("Последние приступы", "Latest spells"), aside = tr("всего ${d.book.spells.size}", "${d.book.spells.size} in all"))
+    if (d.book.spells.isEmpty()) Text(tr("Ни одного – и хорошо.", "None – good."), style = T.small)
+    d.book.spells.take(6).forEach { a ->
         Line(fmtDay(app.caregotchi.domain.dayOf(a.start)), "icon_heart", Troubles.title(a.kind) + (if (a.strength > 0) " · ${a.strength}/10" else "") +
             (if (a.end > 0) " · " + dur(((a.end - a.start) / 1000).toInt()) else "") + when (a.relief) { 3 -> tr(" · помогло", " · helped"); 2 -> tr(" · немного", " · a little"); 1 -> tr(" · не помогло", " · didn't help"); else -> "" }) { nav.push(Screen.AttackEdit(a.id)) }
     }
@@ -171,12 +171,15 @@ fun AttackPage(id: Long, d: Data, nav: Nav) {
     val a0 = d.attacks.firstOrNull { it.id == id } ?: return
     var a by remember(id) { mutableStateOf(a0) }
     fun upd(x: Attack) { a = x; scope.launch { c.saveAttack(x) } }
-    val kinds = Troubles.all.filter { it.id != "period" || d.s.cycle } + d.s.kinds.map { Troubles.of(it) }
+    val kinds = Troubles.kinds(d.s)
+    if (a.kind == app.caregotchi.domain.PERIOD) { PeriodPage(a, nav) { upd(it) }; return }
     Page(Troubles.title(a.kind) + " · " + fmtDay(app.caregotchi.domain.dayOf(a.start)), { nav.pop() }) {
         Head("icon_${Troubles.of(a.kind).icon}", tr("Что это было", "What it was"))
         PicGrid(kinds, 4, gap = 6.dp) { k, mod -> PicTile("icon_${k.icon}", k.title, a.kind == k.id, mod, pic = 40.dp) { upd(a.copy(kind = k.id)) } }
         Head("icon_alarm", tr("Когда", "When"), if (a.end > 0) tr("длился ", "lasted ") + dur(((a.end - a.start) / 1000).toInt()) else tr("ещё идёт", "still going"))
-        Stepper(tr("Начало", "Start"), hhmm(minuteOf(a.start)), { upd(a.copy(start = a.start - 15 * 60_000L)) }, { upd(a.copy(start = a.start + 15 * 60_000L)) })
+        Text(tr("Начало", "Start"), style = T.sec, modifier = Modifier.padding(bottom = 6.dp))
+        app.caregotchi.ui.components.WhenPicker(a.start) { st -> upd(a.copy(start = st, end = if (a.end > 0) a.end + (st - a.start) else 0)) }
+        Spacer(Modifier.height(8.dp))
         if (a.end > 0) Stepper(tr("Конец", "End"), hhmm(minuteOf(a.end)) + if (app.caregotchi.domain.dayOf(a.end) != app.caregotchi.domain.dayOf(a.start)) "+1" else "",
             { upd(a.copy(end = (a.end - 15 * 60_000L).coerceAtLeast(a.start + 60_000))) }, { upd(a.copy(end = a.end + 15 * 60_000L)) })
         else Btn(tr("Отпустило сейчас", "It eased now"), small = true, color = C.sage, ink = Color.White) { scope.launch { c.endAttack(a); a = a.copy(end = System.currentTimeMillis()) } }
@@ -205,6 +208,29 @@ fun AttackPage(id: Long, d: Data, nav: Nav) {
         }
         Head("icon_detective", tr("Похоже, из-за", "Maybe because of"), tr("сыщик сравнит это с днями без приступов", "the detective compares it with good days"))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { Troubles.triggers.forEach { (sid, w) -> val l = a.list(a.triggers); Chip(g(tr(w.first, w.second)), sid in l) { upd(a.copy(triggers = (if (sid in l) l - sid else l + sid).joinToString(","))) } } }
+        Head("icon_letter", tr("Заметка", "Note"))
+        Paper { PaperField(a.note, { upd(a.copy(note = it)) }, tr("Что ещё стоит запомнить", "Anything else worth remembering")) }
+        Ghost(tr("Удалить запись", "Delete"), Modifier.fillMaxWidth().padding(top = 20.dp), color = C.bad) { scope.launch { c.deleteAttack(a); nav.pop() } }
+    }
+}
+
+/** The period's days: when it began and its last day (or that it still goes on), a note. */
+@Composable
+private fun PeriodPage(a: Attack, nav: Nav, upd: (Attack) -> Unit) {
+    val c = LocalContext.current.container
+    val scope = rememberCoroutineScope()
+    val days = if (a.end > 0) app.caregotchi.domain.dayOf(a.end) - app.caregotchi.domain.dayOf(a.start) + 1 else 0
+    Page(Troubles.title(a.kind) + " · " + fmtDay(app.caregotchi.domain.dayOf(a.start)), { nav.pop() }) {
+        Head("icon_period", tr("Месячные", "Period"), if (a.end > 0) tr("$days ${app.caregotchi.domain.plural(days, "день", "дня", "дней")}", "$days days") else tr("ещё идут", "still going"))
+        Text(tr("Начались", "Began"), style = T.sec, modifier = Modifier.padding(bottom = 6.dp))
+        app.caregotchi.ui.components.WhenPicker(a.start, dayOnly = true) { st -> upd(a.copy(start = st, end = if (a.end > 0) maxOf(a.end, st) else 0)) }
+        if (a.end > 0) {
+            Text(tr("Последний день", "The last day"), style = T.sec, modifier = Modifier.padding(top = 14.dp, bottom = 6.dp))
+            app.caregotchi.ui.components.WhenPicker(a.end, dayOnly = true) { e -> upd(a.copy(end = maxOf(e, a.start))) }
+            Ghost(tr("Нет, ещё идут", "No, still going"), Modifier.fillMaxWidth().padding(top = 8.dp)) { upd(a.copy(end = 0)) }
+        } else Btn(tr("Закончились сегодня", "Ended today"), Modifier.fillMaxWidth().padding(top = 14.dp), color = C.sage, ink = Color.White) { upd(a.copy(end = System.currentTimeMillis())) }
+        Text(tr("Симптомы – голова, живот, бессонница – пишутся в «Мне плохо» отдельно. Сыщик сам свяжет их с днями цикла.",
+            "Symptoms – head, stomach, sleeplessness – go in «I feel bad» on their own. The detective ties them to the cycle days."), style = T.tiny, modifier = Modifier.padding(top = 14.dp))
         Head("icon_letter", tr("Заметка", "Note"))
         Paper { PaperField(a.note, { upd(a.copy(note = it)) }, tr("Что ещё стоит запомнить", "Anything else worth remembering")) }
         Ghost(tr("Удалить запись", "Delete"), Modifier.fillMaxWidth().padding(top = 20.dp), color = C.bad) { scope.launch { c.deleteAttack(a); nav.pop() } }

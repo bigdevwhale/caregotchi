@@ -17,6 +17,7 @@ import app.caregotchi.domain.Book
 import app.caregotchi.domain.Chest
 import app.caregotchi.domain.Gender
 import app.caregotchi.domain.Lang
+import app.caregotchi.domain.PERIOD
 import app.caregotchi.domain.Level
 import app.caregotchi.domain.Loot
 import app.caregotchi.domain.Pay
@@ -120,6 +121,22 @@ class AppContainer(context: Context) {
         settle()
     }
 
+    /**
+     * A mark put right afterwards: another time or day, another meal, drink, sport, numbers or medicine.
+     * What it paid stays; a pill moved to another medicine moves the stock with it.
+     */
+    suspend fun editMark(old: Mark, new: Mark) = lock.withLock {
+        val late = if (new.kind == "pill" && new.slot >= 0) (minuteOf(new.at) - new.slot).coerceAtLeast(0) else 0
+        dao.update(new.copy(late = late))
+        if (new.kind == "pill" && old.med != new.med) {
+            val meds = dao.medList()
+            meds.firstOrNull { it.id == old.med }?.let { md -> if (md.stock > 0) dao.update(md.copy(stock = md.stock + md.perDose)) }
+            meds.firstOrNull { it.id == new.med }?.let { md -> if (md.stock > 0) dao.update(md.copy(stock = (md.stock - md.perDose).coerceAtLeast(0))) }
+        }
+        settle()
+        Widget.refresh(app); Reminders.schedule(app)
+    }
+
     suspend fun undo(m: Mark) = lock.withLock {
         dao.deleteMark(m.id)
         settings.update { it.copy(xp = (it.xp - m.xp).coerceAtLeast(0), leaves = (it.leaves - m.leaves).coerceAtLeast(0)) }
@@ -140,7 +157,21 @@ class AppContainer(context: Context) {
 
     suspend fun saveAttack(a: Attack) { if (a.id == 0L) dao.insert(a) else dao.update(a); if (a.took.isNotBlank() && a.relief == 0) Reminders.relief(app, a) }
     suspend fun endAttack(a: Attack, at: Long = System.currentTimeMillis()) { dao.update(a.copy(end = at)); Widget.refresh(app) }
-    suspend fun deleteAttack(a: Attack) = dao.deleteAttack(a.id)
+    suspend fun deleteAttack(a: Attack) { dao.deleteAttack(a.id); Widget.refresh(app) }
+
+    /** The period began (today or on a day picked): a state for days, not a bad spell, so it neither pays nor counts as one. */
+    suspend fun startPeriod(at: Long = System.currentTimeMillis()): Long = dao.insert(Attack(start = at, kind = PERIOD)).also { Widget.refresh(app) }
+
+    /** Own meal times: medicine tied to meals follows them. [remap] says where each old meal went (-1 when removed). */
+    suspend fun setMealTimes(times: List<Int>, remap: (Int) -> Int = { it }) {
+        settings.update { it.copy(mealTimes = times) }
+        for (m in dao.medList()) if (m.food > 0 && m.meals.isNotBlank()) {
+            val meals = m.mealList().map(remap).filter { it >= 0 }.distinct().sorted()
+            val t = m.copy(meals = meals.joinToString(",")).timesFor(times)
+            dao.update(if (t.isEmpty()) m.copy(food = 0, meals = "") else m.copy(meals = meals.joinToString(","), times = t.joinToString(",")))
+        }
+        Reminders.schedule(app)
+    }
 
     /** A day under the blanket: the needs stand still and the day counts as good. */
     suspend fun plaidToday(on: Boolean) {
@@ -149,7 +180,9 @@ class AppContainer(context: Context) {
         Widget.refresh(app)
     }
 
-    suspend fun saveMed(m: Med): Long {
+    suspend fun saveMed(m0: Med): Long {
+        val tied = if (m0.food > 0 && !m0.asNeeded) m0.timesFor(settings.now().mealTimes) else emptyList()
+        val m = if (tied.isNotEmpty()) m0.copy(times = tied.joinToString(",")) else m0.copy(food = 0, meals = "")
         val id = if (m.id == 0L) dao.insert(m.copy(created = System.currentTimeMillis())) else { dao.update(m); m.id }
         Reminders.schedule(app); return id
     }

@@ -49,7 +49,7 @@ object Report {
         fun line(s: String, paint: Paint = p, dy: Float = 15f) { if (y > H - M) newPage(); cv.drawText(s, M, y, paint); y += dy }
 
         val to = today(); val from = to - 89
-        val spells = d.attacks.filter { dayOf(it.start) in from..to }.sortedBy { it.start }
+        val spells = d.book.spells.filter { dayOf(it.start) in from..to }.sortedBy { it.start }
         line(tr("Дневник самочувствия – Заботогочи", "Wellbeing diary – Caregotchi"), title, 22f)
         line(tr("${fmtDay(from)} – ${fmtDay(to)} ${LocalDate.ofEpochDay(to).year}", "${fmtDay(from)} – ${fmtDay(to)} ${LocalDate.ofEpochDay(to).year}"), grey, 22f)
 

@@ -21,7 +21,7 @@ object Backup {
             .put("marks", JSONArray(c.dao.markList().map { m -> JSONObject().put("at", m.at).put("kind", m.kind).put("sub", m.sub).put("med", m.med).put("slot", m.slot)
                 .put("late", m.late).put("q", m.q).put("tags", m.tags).put("mins", m.mins).put("sys", m.sys).put("dia", m.dia).put("pulse", m.pulse).put("xp", m.xp).put("leaves", m.leaves) }))
             .put("meds", JSONArray(c.dao.medList().map { m -> JSONObject().put("id", m.id).put("name", m.name).put("dose", m.dose).put("times", m.times).put("pain", m.pain)
-                .put("stock", m.stock).put("perDose", m.perDose).put("from", m.from).put("until", m.until).put("herb", m.herb).put("archived", m.archived).put("created", m.created) }))
+                .put("stock", m.stock).put("perDose", m.perDose).put("from", m.from).put("until", m.until).put("herb", m.herb).put("archived", m.archived).put("created", m.created).put("food", m.food).put("gap", m.gap).put("meals", m.meals) }))
             .put("attacks", JSONArray(c.dao.attackList().map { a -> JSONObject().put("start", a.start).put("end", a.end).put("kind", a.kind).put("strength", a.strength).put("side", a.side)
                 .put("symptoms", a.symptoms).put("triggers", a.triggers).put("took", a.took).put("relief", a.relief).put("note", a.note) }))
             .put("pets", JSONArray(c.dao.petList().map { p -> JSONObject().put("species", p.species).put("name", p.name).put("found", p.found).put("hatched", p.hatched).put("xp", p.xp).put("home", p.home) }))
@@ -38,7 +38,7 @@ object Backup {
         val c = ctx.container
         val meds = arr("meds").map { o -> Med(id = o.getLong("id"), name = o.getString("name"), dose = o.optString("dose"), times = o.optString("times"), pain = o.optInt("pain"),
             stock = o.optInt("stock"), perDose = o.optInt("perDose", 1), from = o.optLong("from"), until = o.optLong("until"), herb = o.optString("herb", "mint"),
-            archived = o.optBoolean("archived"), created = o.optLong("created")) }
+            archived = o.optBoolean("archived"), created = o.optLong("created"), food = o.optInt("food"), gap = o.optInt("gap", 30), meals = o.optString("meals")) }
         val marks = arr("marks").map { o -> Mark(at = o.getLong("at"), kind = o.getString("kind"), sub = o.optString("sub"), med = o.optLong("med"), slot = o.optInt("slot", -1),
             late = o.optInt("late"), q = o.optInt("q"), tags = o.optString("tags"), mins = o.optInt("mins"), sys = o.optInt("sys"), dia = o.optInt("dia"), pulse = o.optInt("pulse"), xp = o.optInt("xp"), leaves = o.optInt("leaves")) }
         val attacks = arr("attacks").map { o -> Attack(start = o.getLong("start"), end = o.optLong("end"), kind = o.optString("kind", "migraine"), strength = o.optInt("strength"),

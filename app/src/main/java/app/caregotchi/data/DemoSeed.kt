@@ -27,6 +27,8 @@ object DemoSeed {
         val topa = c.dao.insert(Med(name = if (ru) "Топирамат" else "Topiramate", dose = if (ru) "25 мг" else "25 mg", times = "480,1200", herb = "mint", from = from + 4, created = startOf(from + 4)))
         val mag = c.dao.insert(Med(name = if (ru) "Магний B6" else "Magnesium B6", dose = "", times = "780", herb = "chamomile", stock = 12, from = from + 10, created = startOf(from + 10)))
         val suma = c.dao.insert(Med(name = if (ru) "Суматриптан" else "Sumatriptan", dose = if (ru) "50 мг" else "50 mg", pain = 2, herb = "lavender", created = startOf(from)))
+        c.dao.insert(Med(name = if (ru) "Витамин D" else "Vitamin D", dose = if (ru) "2000 МЕ" else "2000 IU", times = "${15 * 60}", food = 3, gap = 60, meals = "1", herb = "sage",
+            from = weekStart(t) + 7, until = weekStart(t) + 7 + 59, created = startOf(t)))
         val ibu = c.dao.insert(Med(name = if (ru) "Ибупрофен" else "Ibuprofen", dose = if (ru) "400 мг" else "400 mg", pain = 1, herb = "rosemary", created = startOf(from)))
         val marks = mutableListOf<Mark>(); val attacks = mutableListOf<Attack>(); val air = mutableListOf<Air>()
         var p = 1014.0
@@ -69,6 +71,12 @@ object DemoSeed {
                 add(Mark(at = s + 20 * 60_000L, kind = "pill", med = took.toLong()))
             }
         }
+        // the cycle: three periods four weeks apart, the last one going on; a sleepless night two days before each
+        val rc = Random(11)
+        for (st in listOf(t - 55, t - 27, t - 1)) {
+            attacks += Attack(start = at(st, 8 * 60 + rc.nextInt(120)), end = if (st < t - 5) at(st + 4, 21 * 60) else 0, kind = app.caregotchi.domain.PERIOD)
+            attacks += Attack(start = at(st - 2, 60 + rc.nextInt(60)), end = at(st - 2, 5 * 60 + rc.nextInt(60)), kind = "insomnia", strength = 4 + rc.nextInt(3))
+        }
         if (awake && marks.filter { it.kind == "sleep" || it.kind == "wake" }.maxByOrNull { it.at }?.kind == "sleep")
             marks += Mark(at = now - 40 * 60_000L, kind = "wake")
         // pay for every mark as the app would have
@@ -87,7 +95,7 @@ object DemoSeed {
         c.settings.update { it.copy(onboarded = false, xp = xp, leaves = 248, leavesEver = 1240, items = setOf("lights", "painting", "plush", "lantern", "books"),
             badges = setOf("0", "4", "2", "14", "12", "5", "3"), eggsSeen = app.caregotchi.domain.Zoo.all.map { it.id }.toSet(), plaids = 2, plaidDays = setOf(t - 17),
             questDay = t, quests = Quests.deal(t, true), questsDone = emptySet(), chestWeek = weekStart(t) - 7,
-            remindBp = true, town = if (ru) "Москва" else "Moscow", lat = 55.75, lon = 37.62, guessed = true, clues = mapOf("f:sleep" to 1),
+            remindBp = true, cycle = true, town = if (ru) "Москва" else "Moscow", lat = 55.75, lon = 37.62, guessed = true, clues = mapOf("f:sleep" to 1),
             outside = Outside(Weather.CLOUDY, 6.0, 1009.0, List(24) { 1009.0 - it * .4 }, now).json(), inbox = emptyList(), seen = setOf("level:$level")) }
         // what the history earned is already on the blanket: no windows on the first look
         repeat(4) { c.tick() }

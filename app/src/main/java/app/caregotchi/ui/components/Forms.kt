@@ -262,3 +262,31 @@ fun Group(icon: String, title: String, modifier: Modifier = Modifier, content: @
         Spacer(Modifier.height(6.dp)); content()
     }
 }
+
+/**
+ * When something happened, to put a record right or add one afterwards: the day (‹ ›, never past today),
+ * the hours and the minutes (by five), each with its own − and +. It never goes into the future.
+ */
+@Composable
+fun WhenPicker(at: Long, modifier: Modifier = Modifier, dayOnly: Boolean = false, onChange: (Long) -> Unit) {
+    val now = System.currentTimeMillis()
+    val day = app.caregotchi.domain.dayOf(at); val min = app.caregotchi.domain.minuteOf(at)
+    fun put(d: Long, m: Int) = onChange((app.caregotchi.domain.startOf(d) + ((m % 1440 + 1440) % 1440) * 60_000L).coerceAtMost(now))
+    @Composable fun Box3(label: String, value: String, mod: Modifier, minus: () -> Unit, plus: () -> Unit, plusOn: Boolean = true) {
+        Column(mod.clip(RoundedCornerShape(14.dp)).background(C.card2).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(label, style = T.tiny)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("‹", style = T.title.copy(color = C.ink), modifier = Modifier.clip(CircleShape).clickable(onClick = minus).padding(horizontal = 10.dp))
+                Text(value, style = T.bodyB, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, maxLines = 1)
+                Text("›", style = T.title.copy(color = if (plusOn) C.ink else C.line), modifier = Modifier.clip(CircleShape).clickable(enabled = plusOn, onClick = plus).padding(horizontal = 10.dp))
+            }
+        }
+    }
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box3(tr("день", "day"), app.caregotchi.domain.relDay(day), Modifier.weight(if (dayOnly) 1f else 1.5f), { put(day - 1, min) }, { put(day + 1, min) }, day < app.caregotchi.domain.today())
+        if (!dayOnly) {
+            Box3(tr("часы", "hours"), "%d".format(min / 60), Modifier.weight(1f), { put(day, min - 60) }, { put(day, min + 60) })
+            Box3(tr("минуты", "minutes"), "%02d".format(min % 60), Modifier.weight(1f), { put(day, min - min % 5 - if (min % 5 == 0) 5 else 0) }, { put(day, min - min % 5 + 5) })
+        }
+    }
+}

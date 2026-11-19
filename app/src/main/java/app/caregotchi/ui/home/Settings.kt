@@ -56,6 +56,8 @@ import app.caregotchi.data.Town
 import app.caregotchi.domain.Lang
 import app.caregotchi.domain.Stage
 import app.caregotchi.domain.hhmm
+import app.caregotchi.domain.Plan
+import app.caregotchi.ui.home.MEALS
 import app.caregotchi.domain.tr
 import app.caregotchi.setLanguage
 import app.caregotchi.ui.Data
@@ -189,7 +191,8 @@ private fun Section(id: String, d: Data, nav: Nav, back: () -> Unit) {
                         }
                     }
                 }
-                RemindRow("icon_eat", tr("Еда", "Meals"), tr("10:00, 14:00, 20:00 – если ещё не ели", "10, 14, 20 – if you haven't eaten"), s.remindMeals) { v -> set { it.copy(remindMeals = v) } }
+                RemindRow("icon_eat", tr("Еда", "Meals"), tr("${s.mealTimes.joinToString(", ") { hhmm(it) }} – если ещё не ели", "${s.mealTimes.joinToString(", ") { hhmm(it) }} – if you haven't eaten"), s.remindMeals) { v -> set { it.copy(remindMeals = v) } }
+                MealTimes(s.mealTimes) { times, remap -> scope.launch { c.setMealTimes(times, remap) } }
                 RemindRow("icon_water", tr("Вода", "Water"), tr("11:00, 15:00, 18:00 – если отстаёте", "11, 15, 18 – if behind"), s.remindWater) { v -> set { it.copy(remindWater = v) } }
                 RemindRow("icon_sleep", tr("Отбой", "Bedtime"), tr("в ${hhmm((s.bedtime - 30 + 1440) % 1440)}, за полчаса до сна", "at ${hhmm((s.bedtime - 30 + 1440) % 1440)}"), s.remindBed) { v -> set { it.copy(remindBed = v) } }
                 RemindRow("icon_heart", tr("«Полегчало?»", "«Feeling better?»"), tr("через 2 часа после лекарства от приступа", "2 hours after medicine for a spell"), s.reliefAsk) { v -> set { it.copy(reliefAsk = v) } }
@@ -202,7 +205,7 @@ private fun Section(id: String, d: Data, nav: Nav, back: () -> Unit) {
             }
             "health" -> {
                 RemindRow("icon_baro", tr("Давление за окном", "Pressure outside"), tr("питомец предупредит, если оно резко падает", "the pet warns when it falls fast"), s.pressureWarn) { v -> set { it.copy(pressureWarn = v) } }
-                RemindRow("icon_period", tr("Месячные", "Periods"), tr("отмечать среди болячек – для менструальной мигрени", "mark among troubles – for menstrual migraine"), s.cycle) { v -> set { it.copy(cycle = v) } }
+                RemindRow("icon_period", tr("Месячные", "Periods"), tr("начало и конец в «Мне плохо», день цикла; сыщик свяжет симптомы с циклом", "start and end in «I feel bad», the cycle day; the detective ties symptoms to the cycle"), s.cycle) { v -> set { it.copy(cycle = v) } }
                 RemindRow("icon_plaid", tr("Строгий режим", "Strict mode"), tr("неделя без заботы – питомец уедет к бабушке, вернётся после трёх дней заботы", "a week without care and the pet leaves for grandma's"), s.strict) { v -> set { it.copy(strict = v) } }
                 Text(tr("Свои болячки", "Your own troubles"), style = T.h3, modifier = Modifier.padding(top = 16.dp))
                 Text(tr("Появятся в «Мне плохо» рядом с остальными.", "They appear in «I feel bad» next to the others."), style = T.tiny)
@@ -343,6 +346,29 @@ private fun DayRibbon(wake: Int, bed: Int) {
         }
         Row(Modifier.fillMaxWidth().padding(top = 4.dp)) { listOf("0", "6", "12", "18", "24").forEach { Text(it, style = T.tiny, modifier = Modifier.weight(1f), textAlign = if (it == "24") TextAlign.End else TextAlign.Start) } }
         Text(tr("Бодрствуете ${awake / 60} ч ${awake % 60} мин, спите ${(1440 - awake) / 60} ч", "Awake ${awake / 60} h ${awake % 60} min, asleep ${(1440 - awake) / 60} h"), style = T.smallB, modifier = Modifier.padding(top = 6.dp))
+    }
+}
+
+/**
+ * One's own meal times, for those who eat by the clock: each with − and + by a quarter of an hour (never past its neighbours),
+ * a cross to drop it, and a button for one more. Medicine tied to meals follows them.
+ */
+@Composable
+private fun MealTimes(times: List<Int>, onChange: (List<Int>, (Int) -> Int) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(start = 56.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        times.forEachIndexed { i, t ->
+            val lo = (times.getOrNull(i - 1) ?: -30) + 30; val hi = (times.getOrNull(i + 1) ?: 1470) - 30
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(C.card2).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("−", style = T.btn.copy(color = if (t - 15 >= lo) C.ink else C.line), modifier = Modifier.clip(CircleShape).clickable(enabled = t - 15 >= lo) { onChange(times.toMutableList().also { it[i] = t - 15 }) { x -> x } }.padding(horizontal = 10.dp))
+                Text(word(MEALS, Plan.mealOf(t)) + " " + hhmm(t), style = T.smallB, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                Text("+", style = T.btn.copy(color = if (t + 15 <= hi) C.ink else C.line), modifier = Modifier.clip(CircleShape).clickable(enabled = t + 15 <= hi) { onChange(times.toMutableList().also { it[i] = t + 15 }) { x -> x } }.padding(horizontal = 10.dp))
+                if (times.size > 1) Text("×", style = T.smallB.copy(color = C.bad), modifier = Modifier.clip(CircleShape).clickable { onChange(times - t) { x -> if (x == i) -1 else if (x > i) x - 1 else x } }.padding(horizontal = 10.dp))
+            }
+        }
+        val last = times.lastOrNull() ?: (8 * 60)
+        if (times.size < 6 && last <= 22 * 60) Text(tr("+ ещё приём пищи", "+ one more meal"), style = T.smallB.copy(color = C.acc),
+            modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable { onChange(times + minOf(last + 180, 23 * 60)) { x -> x } }.padding(horizontal = 8.dp, vertical = 6.dp))
+        Text(tr("Своё время для тех, кто ест по часам. От него считаются и лекарства «до еды» и «после еды».", "Your own times, for those who eat by the clock. Medicine «before» or «after» a meal follows them too."), style = T.tiny)
     }
 }
 

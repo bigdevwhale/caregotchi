@@ -108,7 +108,7 @@ fun Ghost(text: String, modifier: Modifier = Modifier, color: Color = C.ink, sma
 
 @Composable
 fun Chip(text: String, on: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Box(modifier.clip(RoundedCornerShape(50)).background(if (on) C.acc else C.card2).clickable(onClick = onClick).padding(horizontal = 13.dp, vertical = 8.dp)) {
+    Box(modifier.clip(RoundedCornerShape(50)).background(if (on) C.acc else C.card2).clickable(onClick = onClick).padding(horizontal = 13.dp, vertical = 8.dp), contentAlignment = Alignment.Center) {
         Text(text, style = T.smallB.copy(color = if (on) C.accInk else C.ink), maxLines = 1)
     }
 }

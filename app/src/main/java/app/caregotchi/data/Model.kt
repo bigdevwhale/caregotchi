@@ -43,7 +43,9 @@ data class Mark(
  * A medicine. [times] are minutes of the day, comma-separated («480,1200»); empty for as-needed.
  * [pain]: 0 not a painkiller, 1 a simple one (paracetamol, ibuprofen: 15 days a month is the line),
  * 2 a triptan or a combination (10 days). [stock] pills left, 0 when not counted. [until] the course's
- * last epoch day, 0 when there is no end. [herb] is the pot it grows on the windowsill.
+ * last epoch day, 0 when there is no end; [from] its first day (a course can be planned ahead). [herb] is the pot it grows on the windowsill.
+ * [food]: 0 not tied to meals, 1 before a meal, 2 with it, 3 after it; [gap] minutes before or after; [meals] which of the meal
+ * times (indices into the settings' meal times, comma-separated) – then [times] are worked out from those meal times.
  */
 @Entity
 data class Med(
@@ -59,9 +61,16 @@ data class Med(
     val herb: String = "mint",
     val archived: Boolean = false,
     val created: Long = 0,
+    @androidx.room.ColumnInfo(defaultValue = "0") val food: Int = 0,
+    @androidx.room.ColumnInfo(defaultValue = "30") val gap: Int = 30,
+    @androidx.room.ColumnInfo(defaultValue = "") val meals: String = "",
 ) {
     fun timeList(): List<Int> = times.split(',').mapNotNull { it.trim().toIntOrNull() }.sorted()
     val asNeeded get() = times.isBlank()
+    fun mealList(): List<Int> = meals.split(',').mapNotNull { it.trim().toIntOrNull() }.distinct().sorted()
+    /** The times when tied to meals: each chosen meal time, moved by the gap. */
+    fun timesFor(mealTimes: List<Int>): List<Int> = mealList().mapNotNull { mealTimes.getOrNull(it) }
+        .map { ((it + when (food) { 1 -> -gap; 3 -> gap; else -> 0 }) % 1440 + 1440) % 1440 }.distinct().sorted()
 }
 
 /**
@@ -151,8 +160,8 @@ interface Dao0 {
     @Query("DELETE FROM Air") suspend fun clearAir()
 }
 
-@Database(entities = [Mark::class, Med::class, Attack::class, Pet::class, Air::class], version = 2, exportSchema = true,
-    autoMigrations = [androidx.room.AutoMigration(from = 1, to = 2)])
+@Database(entities = [Mark::class, Med::class, Attack::class, Pet::class, Air::class], version = 3, exportSchema = true,
+    autoMigrations = [androidx.room.AutoMigration(from = 1, to = 2), androidx.room.AutoMigration(from = 2, to = 3)])
 abstract class Db : RoomDatabase() {
     abstract fun dao(): Dao0
 

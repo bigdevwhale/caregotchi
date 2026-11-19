@@ -39,6 +39,7 @@ data class Settings(
     val wake: Int = 7 * 60 + 30,
     val remindMeds: Boolean = true,
     val remindMeals: Boolean = false,
+    val mealTimes: List<Int> = listOf(10 * 60, 14 * 60, 20 * 60), // minutes of the day of one's meals, for reminders and medicine tied to food
     val remindWater: Boolean = false,
     val remindBed: Boolean = false,
     val remindBp: Boolean = false,               // measure the blood pressure
@@ -59,7 +60,7 @@ data class Settings(
         put("plaids", plaids); put("plaidDays", arr(plaidDays)); put("questDay", questDay); put("quests", arr(quests)); put("questsDone", arr(questsDone))
         put("chestWeek", chestWeek); put("badges", arr(badges)); put("eggsSeen", arr(eggsSeen)); put("inbox", arr(inbox)); put("seen", arr(seen))
         put("clues", JSONObject(clues as Map<*, *>)); put("theme", theme); put("fem", fem); put("strict", strict); put("waterGoal", waterGoal); put("sleepGoal", sleepGoal); put("moveGoal", moveGoal)
-        put("bedtime", bedtime); put("wake", wake); put("remindMeds", remindMeds); put("remindMeals", remindMeals); put("remindWater", remindWater); put("remindBed", remindBed); put("remindBp", remindBp); put("bpTimes", arr(bpTimes))
+        put("bedtime", bedtime); put("wake", wake); put("remindMeds", remindMeds); put("remindMeals", remindMeals); put("mealTimes", arr(mealTimes)); put("remindWater", remindWater); put("remindBed", remindBed); put("remindBp", remindBp); put("bpTimes", arr(bpTimes))
         put("reliefAsk", reliefAsk); put("pressureWarn", pressureWarn); put("cycle", cycle); put("kinds", arr(kinds))
         put("town", town); if (!lat.isNaN()) { put("lat", lat); put("lon", lon) }; put("guessed", guessed); put("outside", outside); put("warnedDay", warnedDay); put("letterWeek", letterWeek)
     }
@@ -76,7 +77,7 @@ data class Settings(
                 questsDone = set("questsDone"), chestWeek = j.optLong("chestWeek"), badges = set("badges"), eggsSeen = set("eggsSeen"), inbox = list("inbox"), seen = set("seen"),
                 clues = cl, theme = j.optString("theme", d.theme), fem = j.optBoolean("fem"), strict = j.optBoolean("strict"), waterGoal = j.optInt("waterGoal", d.waterGoal),
                 sleepGoal = j.optInt("sleepGoal", d.sleepGoal), moveGoal = j.optInt("moveGoal", d.moveGoal), bedtime = j.optInt("bedtime", d.bedtime), wake = j.optInt("wake", d.wake),
-                remindMeds = j.optBoolean("remindMeds", true), remindMeals = j.optBoolean("remindMeals"), remindWater = j.optBoolean("remindWater"), remindBed = j.optBoolean("remindBed"), remindBp = j.optBoolean("remindBp"), bpTimes = if (j.has("bpTimes")) list("bpTimes").mapNotNull { it.toIntOrNull() } else d.bpTimes,
+                remindMeds = j.optBoolean("remindMeds", true), remindMeals = j.optBoolean("remindMeals"), mealTimes = if (j.has("mealTimes")) list("mealTimes").mapNotNull { it.toIntOrNull() }.ifEmpty { d.mealTimes } else d.mealTimes, remindWater = j.optBoolean("remindWater"), remindBed = j.optBoolean("remindBed"), remindBp = j.optBoolean("remindBp"), bpTimes = if (j.has("bpTimes")) list("bpTimes").mapNotNull { it.toIntOrNull() } else d.bpTimes,
                 reliefAsk = j.optBoolean("reliefAsk", true), pressureWarn = j.optBoolean("pressureWarn", true), cycle = j.optBoolean("cycle"), kinds = list("kinds"),
                 town = j.optString("town"), lat = j.optDouble("lat", Double.NaN), lon = j.optDouble("lon", Double.NaN), guessed = j.optBoolean("guessed"), outside = j.optString("outside"),
                 warnedDay = j.optLong("warnedDay"), letterWeek = j.optLong("letterWeek"))

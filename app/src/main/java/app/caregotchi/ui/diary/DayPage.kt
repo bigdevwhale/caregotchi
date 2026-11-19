@@ -160,7 +160,21 @@ private fun DayThread(day: Long, d: Data, nav: Nav) {
         d.book.attacksOn(day).map { a -> Event(a.start, "icon_${Troubles.of(a.kind).icon}", Troubles.title(a.kind) + (if (a.strength > 0) " · ${a.strength}/10" else "") +
             (if (a.end > a.start) " · " + dur(((a.end - a.start) / 1000).toInt()) else tr(" · идёт", " · ongoing")), spell = a) }
     Text(tr("Нить дня", "The day's thread"), style = T.h3, modifier = Modifier.padding(top = 20.dp))
-    if (events.isEmpty()) { Text(tr("Ни одной отметки.", "Not a single mark."), style = T.small, modifier = Modifier.padding(vertical = 10.dp)); return }
+    d.book.periods.lastOrNull { day in dayOf(it.start)..d.book.periodLast(it) }?.let { p ->
+        Row(Modifier.padding(top = 6.dp).clip(RoundedCornerShape(50)).background(Color(0x33C98B86)).clickable { nav.push(Screen.AttackEdit(p.id)) }.padding(horizontal = 12.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Art("icon_period", Modifier.size(22.dp)); Spacer(Modifier.width(6.dp))
+            Text(tr("Месячные · день ${day - dayOf(p.start) + 1}", "Period · day ${day - dayOf(p.start) + 1}"), style = T.smallB)
+        }
+    }
+    if (events.isEmpty()) Text(tr("Ни одной отметки.", "Not a single mark."), style = T.small, modifier = Modifier.padding(vertical = 10.dp))
+    else Thread(events, d, nav, scope, c::undo)
+    app.caregotchi.ui.components.Ghost(tr("+ Записать на этот день", "+ Add to this day"), Modifier.fillMaxWidth().padding(top = 10.dp)) { nav.sheet = "add:$day" }
+    if (events.any { it.mark != null }) Text(tr("Нажмите на запись, чтобы поправить время или подробности.", "Tap a record to change its time or details."), style = T.tiny, modifier = Modifier.padding(top = 4.dp))
+}
+
+@Composable
+private fun Thread(events: List<Event>, d: Data, nav: Nav, scope: kotlinx.coroutines.CoroutineScope, undo: suspend (Mark) -> Unit) {
     Column(Modifier.fillMaxWidth().padding(top = 8.dp).drawBehind {
         val x = size.width / 2
         drawLine(Color(0xFFC98B86), Offset(x, 0f), Offset(x, size.height), 3.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 9f)))
@@ -170,11 +184,11 @@ private fun DayThread(day: Long, d: Data, nav: Nav) {
             val spell = e.spell
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f), contentAlignment = if (left) Alignment.CenterEnd else Alignment.CenterStart) {
-                    if (left) Card(e, d, nav, scope, c::undo) else Text(hhmm(minuteOf(e.at)), style = T.smallB.copy(color = C.mute), modifier = Modifier.padding(start = 10.dp))
+                    if (left) Card(e, d, nav, scope, undo) else Text(hhmm(minuteOf(e.at)), style = T.smallB.copy(color = C.mute), modifier = Modifier.padding(start = 10.dp))
                 }
                 Box(Modifier.size(if (spell != null) 18.dp else 12.dp).clip(CircleShape).background(if (spell != null) Color(0xFFB0342A) else C.honey).border(2.dp, C.bg, CircleShape))
                 Box(Modifier.weight(1f), contentAlignment = if (left) Alignment.CenterEnd else Alignment.CenterStart) {
-                    if (!left) Card(e, d, nav, scope, c::undo) else Text(hhmm(minuteOf(e.at)), style = T.smallB.copy(color = C.mute), modifier = Modifier.padding(end = 10.dp))
+                    if (!left) Card(e, d, nav, scope, undo) else Text(hhmm(minuteOf(e.at)), style = T.smallB.copy(color = C.mute), modifier = Modifier.padding(end = 10.dp))
                 }
             }
         }
@@ -186,7 +200,7 @@ private fun Card(e: Event, d: Data, nav: Nav, scope: kotlinx.coroutines.Coroutin
     val spell = e.spell
     Row(Modifier.padding(horizontal = 8.dp).shadow(3.dp, RoundedCornerShape(12.dp)).clip(RoundedCornerShape(12.dp))
         .background(if (spell != null) Color(0xFFF3D9D5) else C.paper)
-        .clickable { when { spell != null -> nav.push(Screen.AttackEdit(spell.id)); e.mark?.kind == "eat" -> nav.sheet = "rate:${e.mark.id}" } }
+        .clickable { when { spell != null -> nav.push(Screen.AttackEdit(spell.id)); e.mark != null -> nav.sheet = "mark:${e.mark.id}" } }
         .padding(start = 6.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Art(e.icon, Modifier.size(30.dp))
         Text(e.text, style = T.tiny.copy(color = Color(0xFF3B2E26)), maxLines = 3, modifier = Modifier.padding(start = 6.dp).width(92.dp))

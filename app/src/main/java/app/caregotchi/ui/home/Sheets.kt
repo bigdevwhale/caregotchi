@@ -125,6 +125,9 @@ fun Sheets(d: Data, nav: Nav) {
             }
         }
         sheet == "bp" -> BpSheet(d, nav)
+        sheet == "period" -> PeriodSheet(d, nav)
+        sheet.startsWith("mark:") -> MarkSheet(sheet.drop(5).toLongOrNull() ?: 0, d, nav)
+        sheet.startsWith("add:") -> AddSheet(sheet.drop(4).toLongOrNull() ?: today(), d, nav)
         sheet == "caf" -> CafSheet(d, nav)
         sheet == "move" -> {
             var kind by remember { mutableStateOf("walk") }
@@ -159,7 +162,7 @@ fun Sheets(d: Data, nav: Nav) {
             left.forEach { (m, slot) ->
                 Row(Modifier.fillMaxWidth().clickable { scope.launch { c.log("pill", med = m.id, slot = slot) }; close() }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                     Art("pot_${m.herb}_1", Modifier.size(36.dp)); Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) { Text(m.name + if (m.dose.isNotBlank()) " · ${m.dose}" else "", style = T.bodyB); Text(hhmm(slot), style = T.small) }
+                    Column(Modifier.weight(1f)) { Text(m.name + if (m.dose.isNotBlank()) " · ${m.dose}" else "", style = T.bodyB); Text(hhmm(slot) + app.caregotchi.domain.Plan.foodWord(m).let { if (it.isEmpty()) "" else " · $it" }, style = T.small) }
                     Text(tr("Принял{|а}", "Taken").let(::g), style = T.smallB.copy(color = C.acc))
                 }
             }
@@ -176,9 +179,20 @@ fun Sheets(d: Data, nav: Nav) {
             Text(tr("Что случилось?", "What's wrong?"), style = T.h2)
             Text(tr("Запись – тоже забота. Питомец ничего не теряет.", "Writing it down is care too. The pet loses nothing."), style = T.small)
             Spacer(Modifier.height(12.dp))
-            val kinds = Troubles.all.filter { it.id != "period" || d.s.cycle } + d.s.kinds.map { Troubles.of(it) }
+            val kinds = Troubles.kinds(d.s)
             PicGrid(kinds, 3) { k, mod -> PicTile("icon_${k.icon}", k.title, false, mod, pic = 54.dp) {
                 if (k.id == "pressure") nav.sheet = "bp" else scope.launch { val id = c.startAttack(k.id); close(); if (k.dark) nav.dark = id else nav.push(Screen.AttackEdit(id)) } } }
+            if (d.s.cycle) {
+                val p = d.book.periodNow
+                Row(Modifier.fillMaxWidth().padding(top = 12.dp).clip(RoundedCornerShape(16.dp)).background(Color(0x22C98B86)).border(1.dp, Color(0x55C98B86), RoundedCornerShape(16.dp))
+                    .clickable { nav.sheet = "period" }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Art("icon_period", Modifier.size(40.dp)); Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (p != null) tr("Месячные · день ${today() - app.caregotchi.domain.dayOf(p.start) + 1}", "Period · day ${today() - app.caregotchi.domain.dayOf(p.start) + 1}") else tr("Месячные", "Period"), style = T.bodyB)
+                        Text(if (p != null) tr("Закончились? И что беспокоит сегодня", "Over? And what bothers you today") else tr("Не приступ, а состояние: начало, конец и симптомы отдельно", "Not a spell but a state: the start, the end and symptoms apart"), style = T.small)
+                    }
+                }
+            }
             Spacer(Modifier.height(16.dp))
             val plaid = today() in d.s.plaidDays
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0x22C9B9E0)).border(1.dp, Color(0x55C9B9E0), RoundedCornerShape(16.dp))
@@ -279,11 +293,12 @@ private fun NeedSheet(k: String, d: Data, nav: Nav) {
         ms.forEach { m ->
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(hhmm(minuteOf(m.at)), style = T.smallB.copy(color = C.mute), modifier = Modifier.width(48.dp))
-                Text(markText(m, d), style = T.body, modifier = Modifier.weight(1f).then(if (m.kind == "eat") Modifier.clickable { nav.sheet = "rate:${m.id}" } else Modifier))
+                Text(markText(m, d), style = T.body, modifier = Modifier.weight(1f).clickable { nav.sheet = "mark:${m.id}" })
                 Text(tr("убрать", "undo"), style = T.smallB.copy(color = C.bad), modifier = Modifier.clickable { scope.launch { c.undo(m) } }.padding(6.dp))
             }
         }
-        if (k == "eat") Text(tr("Нажмите на еду, чтобы сказать, насколько она была полезной.", "Tap a meal to say how wholesome it was."), style = T.tiny, modifier = Modifier.padding(top = 6.dp))
+        if (ms.isNotEmpty()) Text(tr("Нажмите на запись, чтобы поправить время или подробности.", "Tap a record to change its time or details."), style = T.tiny, modifier = Modifier.padding(top = 6.dp))
+        Ghost(tr("Записать задним числом", "Add something earlier"), Modifier.fillMaxWidth().padding(top = 10.dp)) { nav.sheet = "add:${today()}" }
         Btn(tr("Открыть день в дневнике", "Open the day in the diary"), Modifier.fillMaxWidth().padding(top = 12.dp), color = C.card2, ink = C.ink) { close(); nav.push(Screen.DayView(today())) }
     }
 }
@@ -448,7 +463,7 @@ fun BpSheet(d: Data, nav: Nav) {
 }
 
 @Composable
-private fun BpField(label: String, value: String, modifier: Modifier, onChange: (String) -> Unit) {
+internal fun BpField(label: String, value: String, modifier: Modifier, onChange: (String) -> Unit) {
     Column(modifier.clip(RoundedCornerShape(16.dp)).background(C.card2).padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, style = T.tiny)
         androidx.compose.foundation.text.BasicTextField(value, { v -> onChange(v.filter { it.isDigit() }.take(3)) }, singleLine = true,

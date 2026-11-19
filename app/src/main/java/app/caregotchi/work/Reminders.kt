@@ -16,6 +16,7 @@ import app.caregotchi.container
 import app.caregotchi.data.Attack
 import app.caregotchi.domain.Gender
 import app.caregotchi.domain.Lang
+import app.caregotchi.domain.Plan
 import app.caregotchi.domain.Troubles
 import app.caregotchi.domain.dayOf
 import app.caregotchi.domain.g
@@ -27,9 +28,11 @@ import app.caregotchi.domain.tr
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /**
- * The pet's reminders: doses on time, meals and water if behind, bedtime, and «better?» two hours after a bad spell.
+ * The pet's reminders: doses on time (after-meal ones follow the meal), meals at one's own times and water if behind, bedtime,
+ * a word the evening before a planned course, and «better?» two hours after a bad spell.
  * One alarm is set for the next thing due; when it rings, it says what's due and sets the next.
  */
 object Reminders {
@@ -53,16 +56,8 @@ object Reminders {
     /** Works out the next reminder and sets the alarm for it. */
     suspend fun schedule(ctx: Context) {
         val c = ctx.container; val s = c.settings.now()
-        val now = System.currentTimeMillis(); val nowMin = minuteOf(now); val t = today()
-        val times = mutableListOf<Long>()
-        if (s.remindMeds) for (m in c.dao.medList()) if (!m.archived && !m.asNeeded && (m.until == 0L || m.until >= t))
-            for (min in m.timeList()) times += startOf(if (min > nowMin) t else t + 1) + min * 60_000L
-        fun daily(min: Int) { times += startOf(if (min > nowMin) t else t + 1) + min * 60_000L }
-        if (s.remindMeals) { daily(10 * 60); daily(14 * 60); daily(20 * 60) }
-        if (s.remindWater) { daily(11 * 60); daily(15 * 60); daily(18 * 60) }
-        if (s.remindBed) daily((s.bedtime - 30 + 1440) % 1440)
-        if (s.remindBp) s.bpTimes.forEach { daily(it) }
-        val next = times.filter { it > now + 30_000 }.minOrNull() ?: return
+        val now = System.currentTimeMillis()
+        val next = Plan.of(c.book(s, now), s).map { it.at }.filter { it > now + 30_000 }.minOrNull() ?: return
         set(ctx, next, pi(ctx, 1, Intent(ctx, RemindReceiver::class.java).putExtra("at", next)))
     }
 
@@ -97,31 +92,36 @@ class RemindReceiver : BroadcastReceiver() {
         val at = intent.getLongExtra("at", System.currentTimeMillis()); val min = minuteOf(at)
         val b = c.book(s)
         val pet = c.dao.petList().firstOrNull { it.home }?.name ?: tr("Заботогочи", "Caregotchi")
-        if (s.remindMeds) {
-            val due = b.dosesLeft().filter { it.second == min }
-            due.forEach { (m, slot) ->
-                val take = Intent(ctx, ActionReceiver::class.java).putExtra("act", "pill").putExtra("med", m.id).putExtra("slot", slot)
-                Reminders.post(ctx, (m.id * 10 + slot / 60).toInt(), Reminders.CH_MEDS, tr("$pet: пора лекарство", "$pet: medicine time"),
-                    "${m.name}${if (m.dose.isNotBlank()) " " + m.dose else ""} · ${hhmm(slot)}", listOf(tr("Принял{|а}", "Taken").let(::g) to PendingIntent.getBroadcast(ctx, (m.id * 100 + slot).toInt(), take, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)))
-            }
-        }
+        val pings = Plan.of(b, s).filter { abs(it.at - at) < 60_000 }
         val d = b.todayCare
         val eatPI = PendingIntent.getBroadcast(ctx, 7, Intent(ctx, ActionReceiver::class.java).putExtra("act", "eat"), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val waterPI = PendingIntent.getBroadcast(ctx, 8, Intent(ctx, ActionReceiver::class.java).putExtra("act", "water"), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        if (s.remindMeals && min in listOf(600, 840, 1200)) {
-            val need = when (min) { 600 -> !d.breakfast && d.meals == 0; 840 -> d.meals < 2; else -> !d.dinner }
-            if (need) Reminders.post(ctx, 20, Reminders.CH_CARE, tr("$pet: пора поесть", "$pet is hungry"),
-                when (min) { 600 -> tr("Завтракаем? Я – кашу.", "Breakfast? Porridge for me."); 840 -> tr("Обед! Без него я грустнею.", "Lunch! I get glum without it."); else -> tr("Ужинать пора.", "Dinner time.") },
+        for (p in pings) when (p.kind) {
+            "pill" -> {
+                val m = p.med ?: continue; val slot = p.slot
+                if (b.marksOn(b.today).any { it.kind == "pill" && it.med == m.id && it.slot == slot }) continue
+                val take = Intent(ctx, ActionReceiver::class.java).putExtra("act", "pill").putExtra("med", m.id).putExtra("slot", slot)
+                val food = Plan.foodWord(m).let { if (it.isEmpty()) "" else " · $it" }
+                Reminders.post(ctx, (m.id * 10 + slot / 60).toInt(), Reminders.CH_MEDS, tr("$pet: пора лекарство", "$pet: medicine time"),
+                    "${m.name}${if (m.dose.isNotBlank()) " " + m.dose else ""} · ${hhmm(slot)}$food", listOf(tr("Принял{|а}", "Taken").let(::g) to PendingIntent.getBroadcast(ctx, (m.id * 100 + slot).toInt(), take, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)))
+            }
+            "start" -> {
+                val m = p.med ?: continue
+                Reminders.post(ctx, 30 + (m.id % 1000).toInt(), Reminders.CH_MEDS, tr("Завтра начинаем «${m.name}»", "«${m.name}» starts tomorrow"),
+                    tr("Первый приём – в ${hhmm(m.timeList().firstOrNull() ?: 0)}. $pet напомнит.", "The first dose is at ${hhmm(m.timeList().firstOrNull() ?: 0)}. $pet will remind you."), open = "med:${m.id}")
+            }
+            "meal" -> if (Plan.hungry(b, s, p.meal)) Reminders.post(ctx, 20, Reminders.CH_CARE, tr("$pet: пора поесть", "$pet is hungry"),
+                when (Plan.mealOf(s.mealTimes[p.meal])) { "breakfast" -> tr("Завтракаем? Я – кашу.", "Breakfast? Porridge for me."); "lunch" -> tr("Обед! Без него я грустнею.", "Lunch! I get glum without it.")
+                    "dinner" -> tr("Ужинать пора.", "Dinner time."); else -> tr("Перекусим? По часам – так по часам.", "A bite? On the clock it is.") },
                 listOf(tr("Поел{|а}", "Ate").let(::g) to eatPI))
+            "water" -> if (d.water < s.waterGoal * (min - s.wake) / (s.bedtime - s.wake).coerceAtLeast(60))
+                Reminders.post(ctx, 21, Reminders.CH_CARE, tr("Стаканчик воды?", "A glass of water?"), tr("Сегодня выпито ${d.water} из ${s.waterGoal}.", "${d.water} of ${s.waterGoal} today."), listOf(tr("Выпил{|а}", "Drank").let(::g) to waterPI))
+            "bed" -> Reminders.post(ctx, 22, Reminders.CH_CARE, tr("$pet зевает", "$pet is yawning"), tr("Через полчаса отбой. Отложим телефон?", "Bedtime in half an hour. Phone away?"))
+            "bp" -> if (b.marks.none { it.kind == "bp" && at - it.at < 3 * 3600_000L })
+                Reminders.post(ctx, 23, Reminders.CH_CARE, tr("Пора измерить давление", "Time to check your blood pressure"),
+                    tr("Измерьте и запишите – $pet всё сохранит.", "Measure it and write it down – $pet will keep it."),
+                    listOf(tr("Записать", "Write it down") to Reminders.open(ctx, "sheet:bp")), open = "sheet:bp")
         }
-        if (s.remindWater && min in listOf(660, 900, 1080) && d.water < s.waterGoal * (min - s.wake) / (s.bedtime - s.wake).coerceAtLeast(60))
-            Reminders.post(ctx, 21, Reminders.CH_CARE, tr("Стаканчик воды?", "A glass of water?"), tr("Сегодня выпито ${d.water} из ${s.waterGoal}.", "${d.water} of ${s.waterGoal} today."), listOf(tr("Выпил{|а}", "Drank").let(::g) to waterPI))
-        if (s.remindBed && min == (s.bedtime - 30 + 1440) % 1440)
-            Reminders.post(ctx, 22, Reminders.CH_CARE, tr("$pet зевает", "$pet is yawning"), tr("Через полчаса отбой. Отложим телефон?", "Bedtime in half an hour. Phone away?"))
-        if (s.remindBp && min in s.bpTimes && b.marks.none { it.kind == "bp" && at - it.at < 3 * 3600_000L })
-            Reminders.post(ctx, 23, Reminders.CH_CARE, tr("Пора измерить давление", "Time to check your blood pressure"),
-                tr("Измерьте и запишите – $pet всё сохранит.", "Measure it and write it down – $pet will keep it."),
-                listOf(tr("Записать", "Write it down") to Reminders.open(ctx, "sheet:bp")), open = "sheet:bp")
         Reminders.schedule(ctx)
     }
 }
@@ -172,10 +172,5 @@ class BootReceiver : BroadcastReceiver() {
 }
 
 /** The meal that fits the hour. */
-fun mealNow(at: Long = System.currentTimeMillis()): String = when (minuteOf(at)) {
-    in 4 * 60 until 11 * 60 -> "breakfast"
-    in 11 * 60 until 16 * 60 -> "lunch"
-    in 16 * 60 until 22 * 60 -> "dinner"
-    else -> "snack"
-}
+fun mealNow(at: Long = System.currentTimeMillis()): String = Plan.mealOf(minuteOf(at))
 

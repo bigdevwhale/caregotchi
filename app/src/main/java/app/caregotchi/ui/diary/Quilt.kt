@@ -105,7 +105,7 @@ internal fun DrawScope.fabric(c: Cloth) {
     }
 }
 
-/** The month as a patchwork quilt; a stitched cross marks a bad spell, a boot a day of moving; tap a patch to open the day. */
+/** The month as a patchwork quilt; a stitched cross marks a bad spell, a rose bead a day of the period; tap a patch to open the day. */
 @Composable
 fun QuiltPane(d: Data, nav: Nav) {
     var shift by remember { mutableIntStateOf(0) }
@@ -119,6 +119,7 @@ fun QuiltPane(d: Data, nav: Nav) {
     }
     Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) { (0..6).forEach { Text(dayShort(it), style = T.tiny, modifier = Modifier.weight(1f), textAlign = TextAlign.Center) } }
     val lead = m.dayOfWeek.value - 1
+    val next = if (d.s.cycle) d.book.nextPeriod else null
     Box {
         Column(Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(10.dp)).clip(RoundedCornerShape(10.dp)).background(Color(0xFFB8845A)).padding(5.dp)
             .clip(RoundedCornerShape(6.dp)).background(Color(0xFFF3E6CC)).padding(3.dp)) {
@@ -140,6 +141,10 @@ fun QuiltPane(d: Data, nav: Nav) {
                                     val c = Offset(size.width / 2, size.height / 2); val r = size.minDimension * .2f; val red = Color(0xFFB0342A)
                                     drawLine(red, c - Offset(r, r), c + Offset(r, r), 4f); drawLine(red, c + Offset(-r, r), c + Offset(r, -r), 4f)
                                 }
+                                // the period: a rose bead in the corner; the next one expected, a hollow ring
+                                val bead = Offset(size.width - size.minDimension * .16f, size.height - size.minDimension * .16f)
+                                if (x?.period == true) drawCircle(Color(0xFFC0566A), size.minDimension * .09f, bead)
+                                else if (day > today() && next != null && day in next..next + 1) drawCircle(Color(0xFFC0566A), size.minDimension * .09f, bead, style = Stroke(2.5f))
                                 if (day == today()) drawRect(Color(0xFF6B4A3A), style = Stroke(5f))
                             }
                             .clickable(enabled = inMonth && day <= today()) { nav.push(Screen.DayView(day)) }) {
