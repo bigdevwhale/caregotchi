@@ -25,7 +25,7 @@ object DemoSeed {
         val from = t - 62
         val ru = Lang.ru
         val topa = c.dao.insert(Med(name = if (ru) "Топирамат" else "Topiramate", dose = if (ru) "25 мг" else "25 mg", times = "480,1200", herb = "mint", from = from + 4, created = startOf(from + 4)))
-        val mag = c.dao.insert(Med(name = if (ru) "Магний B6" else "Magnesium B6", dose = "", times = "780", herb = "chamomile", stock = 12, from = from + 10, created = startOf(from + 10)))
+        val mag = c.dao.insert(Med(name = if (ru) "Магний B6" else "Magnesium B6", dose = "", times = "780", herb = "chamomile", stock = 24, from = from + 10, created = startOf(from + 10)))
         val suma = c.dao.insert(Med(name = if (ru) "Суматриптан" else "Sumatriptan", dose = if (ru) "50 мг" else "50 mg", pain = 2, herb = "lavender", created = startOf(from)))
         c.dao.insert(Med(name = if (ru) "Витамин D" else "Vitamin D", dose = if (ru) "2000 МЕ" else "2000 IU", times = "${15 * 60}", food = 3, gap = 60, meals = "1", herb = "sage",
             from = weekStart(t) + 7, until = weekStart(t) + 7 + 59, created = startOf(t)))

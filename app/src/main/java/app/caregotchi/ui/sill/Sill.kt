@@ -45,6 +45,7 @@ import app.caregotchi.container
 import app.caregotchi.data.Med
 import app.caregotchi.domain.dayShort
 import app.caregotchi.domain.fmtDay
+import app.caregotchi.domain.halves
 import app.caregotchi.domain.fmtDayShort
 import app.caregotchi.domain.Plan
 import app.caregotchi.ui.home.MEALS
@@ -143,7 +144,7 @@ private fun Pillbox(d: Data) {
         val rows = times.map { t ->
             t to (0..6).map { i ->
                 val day = monday + i
-                val ms = d.activeMeds.filter { m -> !m.asNeeded && t in m.timeList() && day >= m.from && (m.until == 0L || day <= m.until) }
+                val ms = d.activeMeds.filter { m -> !m.asNeeded && t in m.timeList() && day >= m.from && (m.until == 0L || day <= m.until) && m.halvesOn(day) > 0 }
                 val done = ms.count { m -> d.book.marksOn(day).any { it.kind == "pill" && it.med == m.id && it.slot == t } }
                 if (day < today() || (day == today() && t <= d.book.nowMin)) { due += ms.size; took += done }
                 Triple(day, ms, done)
@@ -206,6 +207,13 @@ private fun Slips(d: Data, nav: Nav) {
     }
 }
 
+/** The cycle as kept: day 0 is the course's first day [from], while the user said which day [todayIdx] today is. */
+private fun stored(cycle: List<Int>, todayIdx: Int, from: Long): String {
+    if (from >= today()) return cycle.joinToString(",")
+    val n = cycle.size; val shift = Math.floorMod(today() - from, n.toLong()).toInt()
+    return List(n) { j -> cycle[Math.floorMod(todayIdx + j - shift, n)] }.joinToString(",")
+}
+
 /** A medicine as a prescription slip: the name and dose in ink, the times on a clock face, the course, the stock, the pot it grows in. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -221,6 +229,10 @@ fun MedPage(id: Long, d: Data, nav: Nav) {
     var pain by remember { mutableIntStateOf(m0.pain) }
     var stock by remember { mutableIntStateOf(m0.stock) }
     var per by remember { mutableIntStateOf(m0.perDose) }
+    // a dose that changes by the day of a repeating cycle, in halves of a pill (#9)
+    var cycle by remember { mutableStateOf(m0.patternList().takeIf { it.size >= 2 } ?: emptyList()) }
+    // which day of the cycle today is, for a course already running; the stored cycle counts from the first day
+    var todayIdx by remember { mutableIntStateOf(if (cycle.isEmpty() || m0.from > today()) 0 else Math.floorMod(today() - m0.from, cycle.size.toLong()).toInt()) }
     var until by remember { mutableLongStateOf(m0.until) }
     var from by remember { mutableLongStateOf(if (id == 0L) today() else m0.from) }
     var herb by remember { mutableStateOf(m0.herb) }
@@ -293,24 +305,57 @@ fun MedPage(id: Long, d: Data, nav: Nav) {
                 }
             }
             Head("icon_calendar", tr("Курс", "Course"), if (until > 0) tr("до ${fmtDay(until)} включительно", "until ${fmtDay(until)}") else tr("без конца", "no end"))
-            val start = if (planning) from else today()
+            // a running course counts from its first day, so «20 days» stays 20 days when it's opened later
+            val start = if (planning) from else if (m0.until > 0) minOf(m0.from.takeIf { it > 0 } ?: today(), today()) else today()
+            val presets = listOf(7, 14, 30, 60, 90)
+            val len = if (until > 0) (until - start + 1).toInt() else 0
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(0, 7, 14, 30, 60, 90).forEach { n -> Chip(if (n == 0) tr("Без конца", "No end") else tr("$n дн.", "$n d"), if (n == 0) until == 0L else until == start + n - 1) { until = if (n == 0) 0 else start + n - 1 } }
+                Chip(tr("Без конца", "No end"), until == 0L) { until = 0 }
+                presets.forEach { n -> Chip(tr("$n дн.", "$n d"), len == n) { until = start + n - 1 } }
+                Chip(tr("Своё", "Other"), until > 0 && len !in presets) { if (until == 0L) until = start + 19 else if (len in presets) until = start + len }
             }
+            // any length: 20 days, 45 days (#9)
+            if (until > 0) Stepper(tr("Дней в курсе", "Days in the course"), "$len",
+                { until = maxOf(start, until - 1).coerceAtLeast(today()) }, { until += 1 })
         }
         Head("icon_headache", tr("Это обезболивающее?", "Is it a painkiller?"), tr("для счётчика: частые обезболивающие сами могут вызывать головную боль", "for the count: painkillers taken too often can cause headaches"))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(Triple(0, tr("Нет", "No"), "icon_pill"), Triple(1, tr("Обычное", "Simple"), "icon_compress"), Triple(2, tr("Триптан", "Triptan"), "icon_migraine")).forEach { (v, l, ic) ->
                 PicTile(ic, l, pain == v, Modifier.weight(1f), pic = 40.dp) { pain = v } }
         }
-        Head("icon_bottle", tr("Запас", "Stock"), if (stock > 0 && !asNeeded && shown.isNotEmpty()) tr("хватит на ${stock / (shown.size * per).coerceAtLeast(1)} дн.", "lasts ${stock / (shown.size * per).coerceAtLeast(1)} d") else null)
-        Stepper(tr("Таблеток в пачке", "Pills left"), if (stock == 0) tr("не считать", "not counted") else "$stock", { stock = (stock - (if (stock > 20) 5 else 1)).coerceAtLeast(0) }, { stock += if (stock >= 20) 5 else 1 })
-        Stepper(tr("За один приём", "Per dose"), "$per", { per = (per - 1).coerceAtLeast(1) }, { per = (per + 1).coerceAtMost(6) })
+        Head("icon_bottle", tr("Запас", "Stock"), if (stock > 0 && !asNeeded && shown.isNotEmpty()) Med.daysOf(Med(name = "", times = shown.joinToString(","), perDose = per, from = if (planning) from else m0.from, pattern = stored(cycle, todayIdx, if (planning) from else m0.from)), stock, today())
+            ?.let { tr("хватит на $it дн.", "lasts $it d") } else null)
+        Stepper(tr("Таблеток в пачке", "Pills left"), if (stock == 0) tr("не считать", "not counted") else halves(stock), { stock = (stock - (if (stock > 40) 10 else 2)).coerceAtLeast(0) }, { stock += if (stock >= 40) 10 else 2 })
+        if (!asNeeded) {
+            Head("icon_pill", tr("Сколько за приём", "How much a dose"), if (cycle.size >= 2) tr("по кругу, начиная с первого дня курса", "in turn, from the course's first day") else null)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PicTile("icon_pill", tr("Каждый день одинаково", "The same every day"), cycle.isEmpty(), Modifier.weight(1f), pic = 40.dp) { cycle = emptyList() }
+                PicTile("icon_calendar", tr("По дням по-разному", "Different by day"), cycle.isNotEmpty(), Modifier.weight(1f), pic = 40.dp) { if (cycle.isEmpty()) { cycle = listOf(per, per, per); todayIdx = 0 } }
+            }
+        }
+        if (asNeeded || cycle.isEmpty()) Stepper(tr("Таблеток за приём", "Pills a dose"), halves(per), { per = (per - 1).coerceAtLeast(1) }, { per = (per + 1).coerceAtMost(12) })
+        else {
+            val running = (if (planning) from else m0.from) <= today()
+            cycle.forEachIndexed { i, h ->
+                Stepper(tr("День ${i + 1}", "Day ${i + 1}") + if (running && i == todayIdx) tr(" · сегодня", " · today") else "", if (h == 0) tr("перерыв", "off") else halves(h),
+                    { cycle = cycle.toMutableList().also { it[i] = (h - 1).coerceAtLeast(0) } }, { cycle = cycle.toMutableList().also { it[i] = (h + 1).coerceAtMost(12) } })
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (cycle.size < 14) Chip(tr("+ ещё день", "+ one more day"), false, Modifier.weight(1f)) { cycle = cycle + cycle.last() }
+                if (cycle.size > 2) Chip(tr("− убрать день", "− drop a day"), false, Modifier.weight(1f)) { cycle = cycle.dropLast(1) }
+            }
+            if (todayIdx >= cycle.size) todayIdx = 0
+            if (running) FlowRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(tr("Сегодня –", "Today is"), style = T.smallB)
+                cycle.indices.forEach { i -> Chip(tr("день ${i + 1}", "day ${i + 1}"), todayIdx == i) { todayIdx = i } }
+            }
+            Text(tr("Таблеток за приём, «½» – половинка. Потом всё повторяется с первого дня.", "Pills a dose, «½» is half a pill. Then it starts again from day one."), style = T.tiny, modifier = Modifier.padding(top = 6.dp))
+        }
         Head("icon_seedling", tr("Горшок на подоконнике", "Pot on the windowsill"))
-        PicGrid(HERBS, 6, gap = 4.dp) { h, mod -> PicTile("pot_${h}_2", herbName(h), h == herb, mod, pic = 40.dp) { herb = h } }
+        PicGrid(HERBS, 3, gap = 8.dp) { h, mod -> PicTile("pot_${h}_2", herbName(h), h == herb, mod, pic = 48.dp) { herb = h } }
         Btn(tr("Сохранить", "Save"), Modifier.fillMaxWidth().padding(top = 20.dp), enabled = name.isNotBlank() && (asNeeded || (if (food > 0) linked else times.isNotEmpty())), icon = "icon_seedling") {
             scope.launch {
-                c.saveMed(m0.copy(name = name.trim(), dose = dose.trim(), times = if (asNeeded) "" else shown.joinToString(","), pain = pain, stock = stock, perDose = per,
+                c.saveMed(m0.copy(name = name.trim(), dose = dose.trim(), times = if (asNeeded) "" else shown.joinToString(","), pain = pain, stock = stock, perDose = per, pattern = if (asNeeded || cycle.isEmpty()) "" else stored(cycle, todayIdx, if (planning && !asNeeded) from else if (id == 0L) today() else m0.from),
                     until = if (asNeeded) 0 else until, herb = herb, from = if (planning && !asNeeded) from else if (id == 0L) today() else m0.from,
                     food = if (asNeeded) 0 else food, gap = gap, meals = if (asNeeded || food == 0) "" else meals.joinToString(",")))
                 nav.pop()

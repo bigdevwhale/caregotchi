@@ -8,6 +8,7 @@ import android.graphics.pdf.PdfDocument
 import androidx.core.content.FileProvider
 import app.caregotchi.data.Attack
 import app.caregotchi.domain.Troubles
+import app.caregotchi.domain.cycleText
 import app.caregotchi.domain.dayOf
 import app.caregotchi.domain.dur
 import app.caregotchi.domain.fmt1
@@ -15,6 +16,7 @@ import app.caregotchi.domain.fmtDay
 import app.caregotchi.domain.hhmm
 import app.caregotchi.domain.minuteOf
 import app.caregotchi.domain.monthName
+import app.caregotchi.domain.pills
 import app.caregotchi.domain.today
 import app.caregotchi.domain.tr
 import app.caregotchi.ui.Data
@@ -90,7 +92,8 @@ object Report {
 
         line(tr("Лекарства", "Medicine"), h, 17f)
         d.meds.filter { !it.archived || it.until >= from }.forEach { m ->
-            val sched = if (m.asNeeded) tr("по необходимости", "as needed") else m.timeList().joinToString(", ") { hhmm(it) }
+            val sched = (if (m.asNeeded) tr("по необходимости", "as needed") else m.timeList().joinToString(", ") { hhmm(it) }) +
+                (if (m.patternList().size >= 2) tr(", по кругу ${cycleText(m)} таблетки", ", in turn ${cycleText(m)} pills") else if (m.perDose != 2) tr(", по ${pills(m.perDose)}", ", ${pills(m.perDose)} a dose") else "")
             var due = 0; var took = 0
             if (!m.asNeeded) for (day in maxOf(from, d.book.first)..to) { val n0 = d.book.dueOn(m, day).size; due += n0; took += minOf(n0, d.book.marksOn(day).count { it.kind == "pill" && it.med == m.id && it.slot >= 0 }) }
             val used = spells.count { "${m.id}" in it.list(it.took) }

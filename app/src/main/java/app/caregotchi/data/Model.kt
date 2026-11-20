@@ -42,7 +42,9 @@ data class Mark(
 /**
  * A medicine. [times] are minutes of the day, comma-separated («480,1200»); empty for as-needed.
  * [pain]: 0 not a painkiller, 1 a simple one (paracetamol, ibuprofen: 15 days a month is the line),
- * 2 a triptan or a combination (10 days). [stock] pills left, 0 when not counted. [until] the course's
+ * 2 a triptan or a combination (10 days). [stock] pills left and [perDose] pills a dose, both in halves of a pill (#9),
+ * stock 0 when not counted. [pattern]: halves a dose by day of a repeating cycle from [from] («2,2,1» is 1 / 1 / ½;
+ * 0 a day off), empty when every day is [perDose]. [until] the course's
  * last epoch day, 0 when there is no end; [from] its first day (a course can be planned ahead). [herb] is the pot it grows on the windowsill.
  * [food]: 0 not tied to meals, 1 before a meal, 2 with it, 3 after it; [gap] minutes before or after; [meals] which of the meal
  * times (indices into the settings' meal times, comma-separated) – then [times] are worked out from those meal times.
@@ -55,7 +57,7 @@ data class Med(
     val times: String = "",
     val pain: Int = 0,
     val stock: Int = 0,
-    val perDose: Int = 1,
+    val perDose: Int = 2,
     val from: Long = 0,
     val until: Long = 0,
     val herb: String = "mint",
@@ -64,9 +66,26 @@ data class Med(
     @androidx.room.ColumnInfo(defaultValue = "0") val food: Int = 0,
     @androidx.room.ColumnInfo(defaultValue = "30") val gap: Int = 30,
     @androidx.room.ColumnInfo(defaultValue = "") val meals: String = "",
+    @androidx.room.ColumnInfo(defaultValue = "") val pattern: String = "",
 ) {
+    companion object {
+        /** Whole days [stock] halves of [m] last from [day] at its schedule and cycle; null when it takes none. */
+        fun daysOf(m: Med, stock: Int, day: Long): Int? {
+            val n = m.timeList().size
+            if (n == 0 || (0 until maxOf(1, m.patternList().size)).all { m.halvesOn(day + it) == 0 }) return null
+            var left = stock; var d = 0
+            while (d < 3650) { val need = n * m.halvesOn(day + d); if (need > left) break; left -= need; d++ }
+            return d
+        }
+    }
+
     fun timeList(): List<Int> = times.split(',').mapNotNull { it.trim().toIntOrNull() }.sorted()
     val asNeeded get() = times.isBlank()
+    fun patternList(): List<Int> = pattern.split(',').mapNotNull { it.trim().toIntOrNull() }
+    /** Halves of a pill a dose on [day]: the cycle's day counted from the first day, or [perDose]. 0 is a day off. */
+    fun halvesOn(day: Long): Int = patternList().let { p -> if (p.size < 2) p.firstOrNull() ?: perDose else p[Math.floorMod(day - from, p.size.toLong()).toInt()] }
+    /** Halves a pill taken on [day] uses up: that day's dose, or the usual one when it was a day off (taken anyway). */
+    fun taken(day: Long): Int = halvesOn(day).takeIf { it > 0 } ?: perDose.coerceAtLeast(1)
     fun mealList(): List<Int> = meals.split(',').mapNotNull { it.trim().toIntOrNull() }.distinct().sorted()
     /** The times when tied to meals: each chosen meal time, moved by the gap. */
     fun timesFor(mealTimes: List<Int>): List<Int> = mealList().mapNotNull { mealTimes.getOrNull(it) }
@@ -160,12 +179,20 @@ interface Dao0 {
     @Query("DELETE FROM Air") suspend fun clearAir()
 }
 
-@Database(entities = [Mark::class, Med::class, Attack::class, Pet::class, Air::class], version = 3, exportSchema = true,
+@Database(entities = [Mark::class, Med::class, Attack::class, Pet::class, Air::class], version = 4, exportSchema = true,
     autoMigrations = [androidx.room.AutoMigration(from = 1, to = 2), androidx.room.AutoMigration(from = 2, to = 3)])
 abstract class Db : RoomDatabase() {
     abstract fun dao(): Dao0
 
     companion object {
-        fun create(ctx: Context) = Room.databaseBuilder(ctx, Db::class.java, "caregotchi.db").fallbackToDestructiveMigration(true).build()
+        /** Pills are counted in halves from here on (#9), and a dose can change by the day of a cycle. */
+        val M3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `Med` ADD COLUMN `pattern` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("UPDATE `Med` SET `stock` = `stock` * 2, `perDose` = `perDose` * 2")
+            }
+        }
+
+        fun create(ctx: Context) = Room.databaseBuilder(ctx, Db::class.java, "caregotchi.db").addMigrations(M3_4).fallbackToDestructiveMigration(true).build()
     }
 }

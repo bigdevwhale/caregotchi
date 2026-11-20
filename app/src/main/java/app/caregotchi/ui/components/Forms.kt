@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -75,13 +76,13 @@ fun PicTile(icon: String, label: String, on: Boolean, modifier: Modifier = Modif
     }
 }
 
-/** Tiles in rows of [cols]. */
+/** Tiles in rows of [cols], each row's tiles as tall as its tallest. */
 @Composable
 fun <T> PicGrid(items: List<T>, cols: Int, modifier: Modifier = Modifier, gap: Dp = 8.dp, tile: @Composable (T, Modifier) -> Unit) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(gap)) {
         items.chunked(cols).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                row.forEach { tile(it, Modifier.weight(1f)) }
+            Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                row.forEach { tile(it, Modifier.weight(1f).fillMaxHeight()) }
                 repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }

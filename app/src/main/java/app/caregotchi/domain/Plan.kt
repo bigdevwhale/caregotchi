@@ -22,7 +22,7 @@ object Plan {
             if (m.archived || m.asNeeded) continue
             val first = max(m.from, if (m.created > 0) dayOf(m.created) else Long.MIN_VALUE)
             for (d in t..t + 1) {
-                if (d < first || (m.until > 0 && d > m.until)) continue
+                if (d < first || (m.until > 0 && d > m.until) || m.halvesOn(d) == 0) continue
                 for (slot in m.timeList()) out += Ping(at(d, slot) + shift(b, s, m, slot, d), "pill", med = m, slot = slot)
             }
             // a course planned ahead: a word the evening before it starts

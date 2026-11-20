@@ -25,6 +25,23 @@ fun plural(n: Long, one: String, few: String, many: String): String {
     return if (a in 11..14) many else when (b) { 1L -> one; 2L, 3L, 4L -> few; else -> many }
 }
 
+/** Halves of a pill as a number: «½», «1», «1½», «2». */
+fun halves(h: Int): String = (if (h >= 2 || h == 0) "${h / 2}" else "") + (if (h % 2 == 1) "½" else "")
+
+/** «½ таблетки», «1 таблетка», «2 таблетки» / «½ pill», «2 pills»; a day off is «перерыв». */
+fun pills(h: Int): String = when {
+    h <= 0 -> tr("перерыв", "a day off")
+    h % 2 == 1 -> tr("${halves(h)} таблетки", "${halves(h)} pill" + if (h > 1) "s" else "")
+    else -> count(h / 2, "таблетка", "таблетки", "таблеток", "pill", "pills")
+}
+
+/** What a dose of [m] on [day] is, for a reminder or a list: empty for the plain one pill every day. */
+fun doseNote(m: app.caregotchi.data.Med, day: Long): String =
+    if (m.pattern.isBlank() && m.perDose == 2) "" else pills(m.halvesOn(day))
+
+/** The cycle of doses as «1 · 1 · ½». */
+fun cycleText(m: app.caregotchi.data.Med): String = m.patternList().joinToString(" · ") { if (it == 0) tr("перерыв", "off") else halves(it) }
+
 /** «3 тренировки» / «3 workouts». */
 fun count(n: Int, ru1: String, ru2: String, ru5: String, en1: String, enN: String) =
     if (Lang.ru) "${fmt(n.toLong())} ${plural(n.toLong(), ru1, ru2, ru5)}" else "${fmt(n.toLong())} ${if (n == 1) en1 else enN}"

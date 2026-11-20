@@ -19,6 +19,7 @@ import app.caregotchi.domain.Lang
 import app.caregotchi.domain.Plan
 import app.caregotchi.domain.Troubles
 import app.caregotchi.domain.dayOf
+import app.caregotchi.domain.doseNote
 import app.caregotchi.domain.g
 import app.caregotchi.domain.hhmm
 import app.caregotchi.domain.minuteOf
@@ -103,7 +104,7 @@ class RemindReceiver : BroadcastReceiver() {
                 val take = Intent(ctx, ActionReceiver::class.java).putExtra("act", "pill").putExtra("med", m.id).putExtra("slot", slot)
                 val food = Plan.foodWord(m).let { if (it.isEmpty()) "" else " · $it" }
                 Reminders.post(ctx, (m.id * 10 + slot / 60).toInt(), Reminders.CH_MEDS, tr("$pet: пора лекарство", "$pet: medicine time"),
-                    "${m.name}${if (m.dose.isNotBlank()) " " + m.dose else ""} · ${hhmm(slot)}$food", listOf(tr("Принял{|а}", "Taken").let(::g) to PendingIntent.getBroadcast(ctx, (m.id * 100 + slot).toInt(), take, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)))
+                    "${m.name}${if (m.dose.isNotBlank()) " " + m.dose else ""}${doseNote(m, b.today).let { if (it.isEmpty()) "" else " · $it" }} · ${hhmm(slot)}$food", listOf(tr("Принял{|а}", "Taken").let(::g) to PendingIntent.getBroadcast(ctx, (m.id * 100 + slot).toInt(), take, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)))
             }
             "start" -> {
                 val m = p.med ?: continue

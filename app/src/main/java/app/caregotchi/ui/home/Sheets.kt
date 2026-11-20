@@ -162,7 +162,7 @@ fun Sheets(d: Data, nav: Nav) {
             left.forEach { (m, slot) ->
                 Row(Modifier.fillMaxWidth().clickable { scope.launch { c.log("pill", med = m.id, slot = slot) }; close() }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                     Art("pot_${m.herb}_1", Modifier.size(36.dp)); Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) { Text(m.name + if (m.dose.isNotBlank()) " · ${m.dose}" else "", style = T.bodyB); Text(hhmm(slot) + app.caregotchi.domain.Plan.foodWord(m).let { if (it.isEmpty()) "" else " · $it" }, style = T.small) }
+                    Column(Modifier.weight(1f)) { Text(m.name + if (m.dose.isNotBlank()) " · ${m.dose}" else "", style = T.bodyB); Text(hhmm(slot) + app.caregotchi.domain.doseNote(m, d.book.today).let { if (it.isEmpty()) "" else " · $it" } + app.caregotchi.domain.Plan.foodWord(m).let { if (it.isEmpty()) "" else " · $it" }, style = T.small) }
                     Text(tr("Принял{|а}", "Taken").let(::g), style = T.smallB.copy(color = C.acc))
                 }
             }

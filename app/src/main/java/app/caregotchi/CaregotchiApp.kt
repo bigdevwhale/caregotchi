@@ -70,7 +70,7 @@ class AppContainer(context: Context) {
         val m0 = Mark(at = at, kind = kind, sub = sub, med = med, slot = slot, late = late, q = q, tags = tags, mins = mins, sys = sys, dia = dia, pulse = pulse)
         val (xp, leaves) = Pay.of(m0, same, s)
         val id = dao.insert(m0.copy(xp = xp, leaves = leaves))
-        if (kind == "pill" && med > 0) dao.medList().firstOrNull { it.id == med }?.let { m -> if (m.stock > 0) dao.update(m.copy(stock = (m.stock - m.perDose).coerceAtLeast(0))) }
+        if (kind == "pill" && med > 0) dao.medList().firstOrNull { it.id == med }?.let { m -> if (m.stock > 0) dao.update(m.copy(stock = (m.stock - m.taken(day)).coerceAtLeast(0))) }
         val extra = gain(xp, leaves)
         Widget.refresh(app); Reminders.schedule(app)
         Reward(xp, leaves + extra, id).also { rewards.tryEmit(it) }
@@ -130,8 +130,8 @@ class AppContainer(context: Context) {
         dao.update(new.copy(late = late))
         if (new.kind == "pill" && old.med != new.med) {
             val meds = dao.medList()
-            meds.firstOrNull { it.id == old.med }?.let { md -> if (md.stock > 0) dao.update(md.copy(stock = md.stock + md.perDose)) }
-            meds.firstOrNull { it.id == new.med }?.let { md -> if (md.stock > 0) dao.update(md.copy(stock = (md.stock - md.perDose).coerceAtLeast(0))) }
+            meds.firstOrNull { it.id == old.med }?.let { md -> if (md.stock > 0) dao.update(md.copy(stock = md.stock + md.taken(dayOf(old.at)))) }
+            meds.firstOrNull { it.id == new.med }?.let { md -> if (md.stock > 0) dao.update(md.copy(stock = (md.stock - md.taken(dayOf(new.at))).coerceAtLeast(0))) }
         }
         settle()
         Widget.refresh(app); Reminders.schedule(app)
@@ -140,7 +140,7 @@ class AppContainer(context: Context) {
     suspend fun undo(m: Mark) = lock.withLock {
         dao.deleteMark(m.id)
         settings.update { it.copy(xp = (it.xp - m.xp).coerceAtLeast(0), leaves = (it.leaves - m.leaves).coerceAtLeast(0)) }
-        if (m.kind == "pill" && m.med > 0) dao.medList().firstOrNull { it.id == m.med }?.let { md -> if (md.stock > 0 || md.times.isNotBlank()) dao.update(md.copy(stock = md.stock + md.perDose)) }
+        if (m.kind == "pill" && m.med > 0) dao.medList().firstOrNull { it.id == m.med }?.let { md -> if (md.stock > 0 || md.times.isNotBlank()) dao.update(md.copy(stock = md.stock + md.taken(dayOf(m.at)))) }
         Widget.refresh(app)
     }
 

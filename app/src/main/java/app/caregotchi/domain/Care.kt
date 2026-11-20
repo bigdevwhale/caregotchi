@@ -96,7 +96,7 @@ class Book(
         if (m.asNeeded || m.archived) return emptyList()
         val created = if (m.created > 0) dayOf(m.created) else Long.MIN_VALUE
         val from = max(m.from, created)
-        if (day < from || (m.until > 0 && day > m.until)) return emptyList()
+        if (day < from || (m.until > 0 && day > m.until) || m.halvesOn(day) == 0) return emptyList()
         val t = m.timeList()
         return if (day == today) t.filter { it <= nowMin } else t
     }
@@ -209,7 +209,7 @@ class Book(
     /** Doses still due today: (medicine, minute), the next first. */
     fun dosesLeft(): List<Pair<Med, Int>> {
         val taken = byDay[today].orEmpty().filter { it.kind == "pill" }.map { it.med to it.slot }.toSet()
-        return meds.filter { !it.archived && !it.asNeeded && (it.until == 0L || today <= it.until) && it.from <= today }
+        return meds.filter { !it.archived && !it.asNeeded && (it.until == 0L || today <= it.until) && it.from <= today && it.halvesOn(today) > 0 }
             .flatMap { m -> m.timeList().map { m to it } }.filter { (m, t) -> (m.id to t) !in taken }.sortedBy { it.second }
     }
 
@@ -226,9 +226,8 @@ class Book(
 
     /** Pills left of [m] in days, at its schedule; null when the stock isn't counted. */
     fun daysLeft(m: Med): Int? {
-        if (m.stock <= 0 && m.perDose > 0 && m.times.isNotBlank()) return null
-        val perDay = m.timeList().size * m.perDose
-        return if (perDay == 0 || m.stock <= 0) null else m.stock / perDay
+        if (m.stock <= 0 || m.asNeeded) return null
+        return Med.daysOf(m, m.stock, today)
     }
 
     /** How a medicine grows on the windowsill: 0 sprout .. 2 in bloom, 3 wilting; from the last fortnight. */
