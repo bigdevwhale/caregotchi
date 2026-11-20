@@ -6,19 +6,24 @@ line "<!-- tg", then 2-4 short lines in Russian for users (what is new, what is 
 then close it like any HTML comment. The release notes carry it, and the chat bot posts those lines.
 -->
 
-## [1.3.0] - 2026-11-19
+## [1.3.0] - 2026-11-20
 
 ### Added
 - **Put a record right, or add one afterwards.** Tap any mark on the day's thread or in a need's sheet to change its day and time and what it was – the meal and how wholesome, the sport and minutes, the drink and milligrams, the blood pressure, the medicine and its scheduled time – or to delete it. «Add something earlier» (in the sheets and «+ Add to this day» on a day's page) asks when first, then what, and opens the new record to fill in. A bad spell's start can now move to another day too. (#7)
 - **Your own meal times, and medicine tied to them.** Settings → Reminders lists the meals with − and + by a quarter of an hour, a cross to drop one and «+ one more meal» (up to six); the meal reminder comes at those times when nothing was eaten yet. A medicine can be taken before a meal, with it or after it, 15 minutes to 2 hours, at the meals you pick: its times follow the meal times, and an after-meal reminder moves along when the meal was later. (#6)
 - **A course planned ahead.** A new medicine can start today, tomorrow, next Monday, on the 1st or any day; the course length counts from then. Until it starts its pot stands pale with the date, a slip says «Starting soon», and the evening before the pet writes ««…» starts tomorrow». (#5)
 - **The period as a state, not a spell.** With periods on, «I feel bad» has its own row: it began today, yesterday or the day before, it ended, the cycle day and the next one expected, the average cycle. Symptoms – a headache, the stomach, the back, anxiety and the new **insomnia** – are written apart, with their start and end. The detective shows which of them keep to a part of the cycle (the three days before, the first day, the days of it) and how long they usually last, and whether spells come more often around the period; a spell then gets «Cycle» as a likely trigger. The quilt marks the period's days with a rose bead and the next expected one with a ring. The period no longer counts among the spells, on the home screen or in the doctor's report. (#8)
+- **Half pills, a course of any length, a dose that changes by the day.** The dose and the stock go by halves: ½, 1, 1½. Besides 7–90 days, «Other» sets any length, 20 days or 45. «Different by day» gives a cycle of up to 14 days (1 / 1 / ½, or a day off) that repeats from the first day; for a running medicine you say which day today is. Reminders, the pill sheet and the doctor's report say the day's dose, and «lasts N days» follows the cycle. (#9)
+
+### Fixed
+- The pots on a medicine's page, and other picture tiles, stood at different heights when a name took two lines; they now keep one height in a row, and the pots are three to a row.
 
 <!-- tg
 Записи можно исправлять: время, день и что именно было. А забытое – вносить задним числом.
 Своё время еды для тех, кто ест по часам, и лекарства «за 30 минут до еды» или «через час после»: напоминание сдвинется следом за обедом.
 Курс лекарства можно запланировать заранее, например с 1 декабря, – накануне питомец напомнит.
 Месячные теперь не приступ, а состояние: начало, конец и день цикла. Симптомы пишутся отдельно, и сыщик покажет, в какие дни цикла они приходят.
+Можно принимать по половинке таблетки, задать курс любой длины, например 20 дней, и разную дозу по дням: 1, 1, ½ и снова по кругу.
 -->
 
 ## [1.2.0] - 2026-11-19
