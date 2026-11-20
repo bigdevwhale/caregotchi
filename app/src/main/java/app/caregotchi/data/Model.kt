@@ -82,8 +82,10 @@ data class Med(
     fun timeList(): List<Int> = times.split(',').mapNotNull { it.trim().toIntOrNull() }.sorted()
     val asNeeded get() = times.isBlank()
     fun patternList(): List<Int> = pattern.split(',').mapNotNull { it.trim().toIntOrNull() }
+    /** Which day of the cycle [from] was («2,2,1,@1»: the course began on its second day), so the days keep the numbers the user gave them. */
+    fun cycleStart(): Int = pattern.substringAfter('@', "").trim().toIntOrNull() ?: 0
     /** Halves of a pill a dose on [day]: the cycle's day counted from the first day, or [perDose]. 0 is a day off. */
-    fun halvesOn(day: Long): Int = patternList().let { p -> if (p.size < 2) p.firstOrNull() ?: perDose else p[Math.floorMod(day - from, p.size.toLong()).toInt()] }
+    fun halvesOn(day: Long): Int = patternList().let { p -> if (p.size < 2) p.firstOrNull() ?: perDose else p[Math.floorMod(day - from + cycleStart(), p.size.toLong()).toInt()] }
     /** Halves a pill taken on [day] uses up: that day's dose, or the usual one when it was a day off (taken anyway). */
     fun taken(day: Long): Int = halvesOn(day).takeIf { it > 0 } ?: perDose.coerceAtLeast(1)
     fun mealList(): List<Int> = meals.split(',').mapNotNull { it.trim().toIntOrNull() }.distinct().sorted()

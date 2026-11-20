@@ -26,6 +26,14 @@ class DoseCycleTest {
         assertEquals(1, Med(name = "B", times = "480", perDose = 1, from = day).halvesOn(day + 5))
     }
 
+    @Test fun theCycleCanBeginOnALaterDay() {
+        // the course began on day 2 of the cycle: the days keep the user's numbers
+        val m = Med(name = "A", times = "480", from = day, pattern = "2,2,1,@1")
+        assertEquals(listOf(2, 2, 1), m.patternList())
+        assertEquals(1, m.cycleStart())
+        assertEquals(listOf(2, 1, 2, 2, 1), (0L until 5L).map { m.halvesOn(day + it) })
+    }
+
     @Test fun aDayOffUsesTheUsualDoseWhenTakenAnyway() {
         val m = Med(name = "A", times = "480", from = day, perDose = 2, pattern = "2,0")
         assertEquals(0, m.halvesOn(day + 1))

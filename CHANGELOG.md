@@ -6,6 +6,15 @@ line "<!-- tg", then 2-4 short lines in Russian for users (what is new, what is 
 then close it like any HTML comment. The release notes carry it, and the chat bot posts those lines.
 -->
 
+## [1.3.1] - 2026-11-20
+
+### Fixed
+- «Today is day N» on a medicine with a dose that changes by the day was lost: for a course that began today it went back to day 1, and for a running one the days got new numbers. The cycle is now kept in the order you gave it, with the day of it the course began on. (#10)
+
+<!-- tg
+Исправили разную дозу по дням: выбранный «сегодня – день 2» больше не слетает на первый день.
+-->
+
 ## [1.3.0] - 2026-11-20
 
 ### Added

@@ -207,11 +207,11 @@ private fun Slips(d: Data, nav: Nav) {
     }
 }
 
-/** The cycle as kept: day 0 is the course's first day [from], while the user said which day [todayIdx] today is. */
+/** The cycle as kept, in the user's order, with «@k» when the course's first day [from] was day k of it – so that today is day [todayIdx]. */
 private fun stored(cycle: List<Int>, todayIdx: Int, from: Long): String {
-    if (from >= today()) return cycle.joinToString(",")
-    val n = cycle.size; val shift = Math.floorMod(today() - from, n.toLong()).toInt()
-    return List(n) { j -> cycle[Math.floorMod(todayIdx + j - shift, n)] }.joinToString(",")
+    if (from > today()) return cycle.joinToString(",")
+    val k = Math.floorMod(todayIdx - (today() - from), cycle.size.toLong()).toInt()
+    return cycle.joinToString(",") + if (k != 0) ",@$k" else ""
 }
 
 /** A medicine as a prescription slip: the name and dose in ink, the times on a clock face, the course, the stock, the pot it grows in. */
@@ -232,7 +232,7 @@ fun MedPage(id: Long, d: Data, nav: Nav) {
     // a dose that changes by the day of a repeating cycle, in halves of a pill (#9)
     var cycle by remember { mutableStateOf(m0.patternList().takeIf { it.size >= 2 } ?: emptyList()) }
     // which day of the cycle today is, for a course already running; the stored cycle counts from the first day
-    var todayIdx by remember { mutableIntStateOf(if (cycle.isEmpty() || m0.from > today()) 0 else Math.floorMod(today() - m0.from, cycle.size.toLong()).toInt()) }
+    var todayIdx by remember { mutableIntStateOf(if (cycle.isEmpty() || m0.from > today()) 0 else Math.floorMod(today() - m0.from + m0.cycleStart(), cycle.size.toLong()).toInt()) }
     var until by remember { mutableLongStateOf(m0.until) }
     var from by remember { mutableLongStateOf(if (id == 0L) today() else m0.from) }
     var herb by remember { mutableStateOf(m0.herb) }
