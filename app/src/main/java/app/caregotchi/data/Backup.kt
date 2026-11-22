@@ -23,7 +23,7 @@ object Backup {
             .put("meds", JSONArray(c.dao.medList().map { m -> JSONObject().put("id", m.id).put("name", m.name).put("dose", m.dose).put("times", m.times).put("pain", m.pain)
                 .put("stock", m.stock).put("perDose", m.perDose).put("from", m.from).put("until", m.until).put("herb", m.herb).put("archived", m.archived).put("created", m.created).put("food", m.food).put("gap", m.gap).put("meals", m.meals).put("pattern", m.pattern) }))
             .put("attacks", JSONArray(c.dao.attackList().map { a -> JSONObject().put("start", a.start).put("end", a.end).put("kind", a.kind).put("strength", a.strength).put("side", a.side)
-                .put("symptoms", a.symptoms).put("triggers", a.triggers).put("took", a.took).put("relief", a.relief).put("note", a.note) }))
+                .put("symptoms", a.symptoms).put("triggers", a.triggers).put("took", a.took).put("relief", a.relief).put("note", a.note).put("curve", a.curve) }))
             .put("pets", JSONArray(c.dao.petList().map { p -> JSONObject().put("species", p.species).put("name", p.name).put("found", p.found).put("hatched", p.hatched).put("xp", p.xp).put("home", p.home) }))
             .put("air", JSONArray(c.dao.airList().map { a -> JSONObject().put("day", a.day).put("min", a.min).put("max", a.max).put("last", a.last) }))
         ctx.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(j.toString().toByteArray()) }
@@ -44,7 +44,7 @@ object Backup {
         val marks = arr("marks").map { o -> Mark(at = o.getLong("at"), kind = o.getString("kind"), sub = o.optString("sub"), med = o.optLong("med"), slot = o.optInt("slot", -1),
             late = o.optInt("late"), q = o.optInt("q"), tags = o.optString("tags"), mins = o.optInt("mins"), sys = o.optInt("sys"), dia = o.optInt("dia"), pulse = o.optInt("pulse"), xp = o.optInt("xp"), leaves = o.optInt("leaves")) }
         val attacks = arr("attacks").map { o -> Attack(start = o.getLong("start"), end = o.optLong("end"), kind = o.optString("kind", "migraine"), strength = o.optInt("strength"),
-            side = o.optString("side"), symptoms = o.optString("symptoms"), triggers = o.optString("triggers"), took = o.optString("took"), relief = o.optInt("relief"), note = o.optString("note")) }
+            side = o.optString("side"), symptoms = o.optString("symptoms"), triggers = o.optString("triggers"), took = o.optString("took"), relief = o.optInt("relief"), note = o.optString("note"), curve = o.optString("curve")) }
         val pets = arr("pets").map { o -> Pet(species = o.getString("species"), name = o.getString("name"), found = o.optLong("found"), hatched = o.optLong("hatched"), xp = o.optInt("xp"), home = o.optBoolean("home")) }
         val air = arr("air").map { o -> Air(o.getLong("day"), o.getDouble("min"), o.getDouble("max"), o.getDouble("last")) }
         val settings = j.optJSONObject("settings")?.let { Settings.of(it) } ?: return false

@@ -130,7 +130,8 @@ object Report {
 
     private fun row(a: Attack, d: Data): String {
         val took = a.list(a.took).joinToString(", ") { id -> id.toLongOrNull()?.let { d.book.medById[it]?.name } ?: id }
-        val rel = when (a.relief) { 3 -> tr(" – да", " – yes"); 2 -> tr(" – немного", " – a little"); 1 -> tr(" – нет", " – no"); else -> "" }
+        val rel = when (a.relief) { 3 -> tr(" – да", " – yes"); 2 -> tr(" – немного", " – a little"); 1 -> tr(" – нет", " – no"); else -> "" } +
+            if (a.points.size > 1) "  [" + app.caregotchi.ui.components.curveText(a) + "]" else ""
         return "${LocalDate.ofEpochDay(dayOf(a.start))}  ${hhmm(minuteOf(a.start)).padStart(5)}   ${(if (a.end > 0) dur(((a.end - a.start) / 1000).toInt()) else "–").padEnd(10)} ${(if (a.strength > 0) "${a.strength}" else "–").padEnd(5)} ${Troubles.title(a.kind).take(16).padEnd(17)} ${took.ifEmpty { "–" }}$rel"
     }
 }

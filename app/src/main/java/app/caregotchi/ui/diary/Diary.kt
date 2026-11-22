@@ -184,7 +184,8 @@ fun AttackPage(id: Long, d: Data, nav: Nav) {
             { upd(a.copy(end = (a.end - 15 * 60_000L).coerceAtLeast(a.start + 60_000))) }, { upd(a.copy(end = a.end + 15 * 60_000L)) })
         else Btn(tr("Отпустило сейчас", "It eased now"), small = true, color = C.sage, ink = Color.White) { scope.launch { c.endAttack(a); a = a.copy(end = System.currentTimeMillis()) } }
         Head("icon_thermo", tr("Сила", "Strength"))
-        StrengthBar(a.strength) { upd(a.copy(strength = it)) }
+        StrengthBar(a.now) { upd(if (a.end == 0L) a.felt(it) else a.copy(strength = it)) }
+        if (a.points.size > 1) Text(app.caregotchi.ui.components.curveText(a), style = T.small, modifier = Modifier.padding(top = 4.dp))
         if (a.kind == "migraine" || a.kind == "headache") {
             Head("icon_headache", tr("Где болело", "Where it hurt"))
             HeadPicker(a.side) { upd(a.copy(side = it)) }
@@ -197,6 +198,14 @@ fun AttackPage(id: Long, d: Data, nav: Nav) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             d.meds.filter { !it.archived || "${it.id}" in a.list(a.took) }.take(5).forEach { m -> val l = a.list(a.took)
                 Token("pot_${m.herb}_2", m.name.take(10), "${m.id}" in l) { upd(a.copy(took = (if ("${m.id}" in l) l - "${m.id}" else l + "${m.id}").joinToString(","))) } }
+        }
+        // what isn't on the sill, in your own words (#11)
+        FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val l = a.list(a.took)
+            l.filter { it.toLongOrNull() == null }.forEach { name -> Chip("$name ✕", true) { upd(a.copy(took = (l - name).joinToString(","))) } }
+            var other by remember { mutableStateOf(false) }
+            Chip(tr("+ Другое", "+ Other"), false) { other = true }
+            if (other) app.caregotchi.ui.components.TookOther({ other = false }) { name -> upd(a.copy(took = (l + name).joinToString(","))) }
         }
         if (a.took.isNotBlank()) {
             Head("icon_heart", tr("Помогло?", "Did it help?"))

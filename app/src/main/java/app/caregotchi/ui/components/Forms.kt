@@ -1,5 +1,7 @@
 package app.caregotchi.ui.components
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -290,4 +292,26 @@ fun WhenPicker(at: Long, modifier: Modifier = Modifier, dayOnly: Boolean = false
             Box3(tr("минуты", "minutes"), "%02d".format(min % 60), Modifier.weight(1f), { put(day, min - min % 5 - if (min % 5 == 0) 5 else 0) }, { put(day, min - min % 5 + 5) })
         }
     }
+}
+
+/** How a spell went (#11): «8:00 – 3 → 9:10 – 5 → 10:00 – 3 · отпустило в 11:00». */
+fun curveText(a: app.caregotchi.data.Attack): String =
+    a.points.joinToString(" → ") { (t, v) -> "${app.caregotchi.domain.hhmm(app.caregotchi.domain.minuteOf(t))} – $v" } +
+        if (a.end > 0) tr(" · отпустило в ", " · eased at ") + app.caregotchi.domain.hhmm(app.caregotchi.domain.minuteOf(a.end)) else ""
+
+/** Something taken that isn't on the sill, in a few words (#11). */
+@Composable
+fun TookOther(onClose: () -> Unit, dark: Boolean = false, onAdd: (String) -> Unit) {
+    var t by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(tr("Что ещё приняли?", "What else did you take?"), style = T.h3.copy(color = if (dark) Color(0xFFD9A196) else T.h3.color)) },
+        text = { androidx.compose.material3.OutlinedTextField(t, { t = it.replace(",", " ").take(30) }, singleLine = true, placeholder = { Text(tr("Например: кофе, цитрамон", "E.g. coffee, aspirin")) }) },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { if (t.isNotBlank()) onAdd(t.trim()); onClose() }) { Text(tr("Добавить", "Add")) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(tr("Отмена", "Cancel")) } },
+        // in the dark room it stays dim too
+        containerColor = if (dark) Color(0xFF2A1915) else androidx.compose.material3.AlertDialogDefaults.containerColor,
+        titleContentColor = if (dark) Color(0xFFD9A196) else androidx.compose.material3.AlertDialogDefaults.titleContentColor,
+        textContentColor = if (dark) Color(0xFFC98E83) else androidx.compose.material3.AlertDialogDefaults.textContentColor,
+    )
 }

@@ -157,14 +157,16 @@ class ActionReceiver : BroadcastReceiver() {
             }
             "eat" -> { c.log("eat", sub = mealNow()); NotificationManagerCompat.from(ctx).cancel(20) }
             "water" -> { c.log("water"); NotificationManagerCompat.from(ctx).cancel(21) }
-            "sleep" -> c.log(if (c.book().asleep) "wake" else "sleep")
+            // a second press within three seconds is an accidental double tap: it doesn't undo the first (#13)
+            "sleep" -> { val last = c.book().marks.filter { it.kind == "sleep" || it.kind == "wake" }.maxByOrNull { it.at }
+                if (last == null || System.currentTimeMillis() - last.at > 3_000) c.log(if (c.book().asleep) "wake" else "sleep") }
             "relief" -> {
                 val id = intent.getLongExtra("id", 0)
                 c.dao.attack(id)?.let { c.dao.update(it.copy(relief = intent.getIntExtra("v", 0), end = if (intent.getIntExtra("v", 0) == 3 && it.end == 0L) System.currentTimeMillis() else it.end)) }
                 NotificationManagerCompat.from(ctx).cancel(5000 + id.toInt())
             }
         }
-        Widget.refresh(ctx)
+        Widget.draw(ctx)
     }
 }
 

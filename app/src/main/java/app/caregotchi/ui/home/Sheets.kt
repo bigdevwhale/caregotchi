@@ -337,7 +337,9 @@ fun DarkRoom(id: Long, d: Data, nav: Nav) {
         Text(tr("Тише, я рядом", "Hush, I'm here"), style = T.h2.copy(color = Color(0xFFD9A196)))
         Text(Troubles.title(a.kind) + " · " + tr("с ", "since ") + hhmm(minuteOf(a.start)) + tr(". Отметьте, что можете, – остальное потом.", ". Mark what you can – the rest later."), style = T.small.copy(color = Color(0xFF8D5F57)))
         Lbl(tr("Сила", "How strong"))
-        StrengthBar(a.strength, dark = true) { save(a.copy(strength = it)) }
+        StrengthBar(a.now, dark = true) { save(if (a.end == 0L) a.felt(it) else a.copy(strength = it)) }
+        // how it went: the time of each change (#11)
+        if (a.points.size > 1) Text(app.caregotchi.ui.components.curveText(a), style = T.small.copy(color = Color(0xFF8D5F57)), modifier = Modifier.padding(top = 4.dp))
         if (a.kind == "migraine" || a.kind == "headache") {
             Lbl(tr("Где", "Where"))
             HeadPicker(a.side, dark = true) { save(a.copy(side = it)) }
@@ -353,6 +355,11 @@ fun DarkRoom(id: Long, d: Data, nav: Nav) {
                 save(a.copy(took = (if (took) l + "${m.id}" else l - "${m.id}").joinToString(",")))
                 if (took) scope.launch { c.log("pill", med = m.id) }
             } }
+            // what isn't on the sill, in your own words (#11)
+            l.filter { it.toLongOrNull() == null }.forEach { name -> Big(name, true) { save(a.copy(took = (l - name).joinToString(","))) } }
+            var other by remember { mutableStateOf(false) }
+            Big(tr("+ Другое", "+ Other"), false) { other = true }
+            if (other) app.caregotchi.ui.components.TookOther({ other = false }, dark = true) { name -> save(a.copy(took = (l + name).joinToString(","))) }
             Big(tr("Ничего", "Nothing"), l.isEmpty() && a.relief == -1) { save(a.copy(took = "")) }
         }
         Lbl(tr("Похоже, из-за", "Maybe because of"))

@@ -13,6 +13,8 @@ import app.caregotchi.domain.Lang
 import app.caregotchi.domain.Mood
 import app.caregotchi.domain.Stage
 import app.caregotchi.domain.tr
+import app.caregotchi.domain.hhmm
+import app.caregotchi.domain.minuteOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,12 +40,18 @@ object Widget {
         else -> tr("У бабушки", "At grandma's")
     }
 
-    fun refresh(ctx: Context) {
+    fun refresh(ctx: Context) { CoroutineScope(Dispatchers.Default).launch { draw(ctx) } }
+
+    /**
+     * Draws the widget and returns once it is drawn (#13). A button press waits for this: before, the redraw ran on
+     * its own and the system could freeze the app first, so the sleep button looked untouched and a second press undid it.
+     */
+    suspend fun draw(ctx: Context) {
         val app = ctx.applicationContext
         val mgr = AppWidgetManager.getInstance(app)
         val ids = mgr.getAppWidgetIds(ComponentName(app, WidgetProvider::class.java))
         if (ids.isEmpty()) return
-        CoroutineScope(Dispatchers.Default).launch {
+        run {
             runCatching {
                 Lang.ru = app.resources.configuration.locales[0].language == "ru"
                 val c = app.container; val b = c.book()
@@ -55,13 +63,17 @@ object Widget {
                 v.setTextViewText(R.id.name, pet?.name ?: tr("Заботогочи", "Caregotchi"))
                 val n = b.needs
                 val low = listOf(n.eat to tr("голоден", "hungry"), n.water to tr("хочет пить", "thirsty"), n.pill to tr("ждёт лекарство", "waiting for medicine")).filter { it.first < .4 }.joinToString(", ") { it.second }
-                v.setTextViewText(R.id.state, moodText(mood, b.asleep) + if (low.isNotEmpty()) " · $low" else "")
+                // asleep: when the bed was marked, so a press is seen to have worked (#13)
+                val bedAt = if (b.asleep) b.marks.filter { it.kind == "sleep" }.maxByOrNull { it.at }?.at else null
+                v.setTextViewText(R.id.state, if (bedAt != null) tr("✓ Спит с ", "✓ Asleep since ") + hhmm(minuteOf(bedAt))
+                    else moodText(mood, b.asleep) + if (low.isNotEmpty()) " · $low" else "")
                 fun act(code: Int, a: String) = PendingIntent.getBroadcast(app, 9000 + code, Intent(app, ActionReceiver::class.java).putExtra("act", a), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                 v.setOnClickPendingIntent(R.id.eat, act(1, "eat"))
                 v.setOnClickPendingIntent(R.id.water, act(2, "water"))
                 v.setOnClickPendingIntent(R.id.pill, if (b.dosesLeft().isNotEmpty()) act(3, "pill") else Reminders.open(app, "pill"))
                 // bed at night, up in the morning: the button follows whether the pet is asleep
                 v.setImageViewResource(R.id.sleep, if (b.asleep) R.drawable.icon_sunrise else R.drawable.icon_sleep)
+                v.setInt(R.id.sleep, "setBackgroundResource", if (b.asleep) R.drawable.widget_btn_on else R.drawable.widget_btn)
                 v.setOnClickPendingIntent(R.id.sleep, act(4, "sleep"))
                 v.setOnClickPendingIntent(R.id.bad, Reminders.open(app, "bad"))
                 v.setOnClickPendingIntent(R.id.pet, Reminders.open(app, ""))

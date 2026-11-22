@@ -112,8 +112,23 @@ data class Attack(
     val took: String = "",
     val relief: Int = 0,
     val note: String = "",
+    /** How the pain went (#11): «ms:strength» pairs, oldest first; [strength] is then the worst of them. */
+    @androidx.room.ColumnInfo(defaultValue = "") val curve: String = "",
 ) {
     fun list(s: String) = s.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    /** The points of [curve]. */
+    val points: List<Pair<Long, Int>> get() = curve.split(',').mapNotNull { p -> p.split(':').takeIf { it.size == 2 }?.let { (t, v) -> t.toLongOrNull()?.let { tt -> v.toIntOrNull()?.let { tt to it } } } }
+    /** How strong it is now: the last point, or the one strength said. */
+    val now: Int get() = points.lastOrNull()?.second ?: strength
+    /** The pain changed to [v] at [at]: a point on the curve (a change within two minutes corrects the last one). */
+    fun felt(v: Int, at: Long = System.currentTimeMillis()): Attack {
+        val ps = points.toMutableList()
+        if (ps.isNotEmpty() && at - ps.last().first < 120_000) ps.removeAt(ps.lastIndex)
+        // the first word on a fresh spell belongs to its start
+        val t = if (ps.isEmpty() && at - start < 15 * 60_000) start else at
+        ps += t to v
+        return copy(curve = ps.joinToString(",") { "${it.first}:${it.second}" }, strength = ps.maxOf { it.second })
+    }
 }
 
 /** A pet of the hollow. Until [hatched] it is an egg. [xp] is the care it has shared. [home] is the one in the hollow now. */
@@ -181,8 +196,8 @@ interface Dao0 {
     @Query("DELETE FROM Air") suspend fun clearAir()
 }
 
-@Database(entities = [Mark::class, Med::class, Attack::class, Pet::class, Air::class], version = 4, exportSchema = true,
-    autoMigrations = [androidx.room.AutoMigration(from = 1, to = 2), androidx.room.AutoMigration(from = 2, to = 3)])
+@Database(entities = [Mark::class, Med::class, Attack::class, Pet::class, Air::class], version = 5, exportSchema = true,
+    autoMigrations = [androidx.room.AutoMigration(from = 1, to = 2), androidx.room.AutoMigration(from = 2, to = 3), androidx.room.AutoMigration(from = 4, to = 5)])
 abstract class Db : RoomDatabase() {
     abstract fun dao(): Dao0
 
