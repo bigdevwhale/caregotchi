@@ -6,6 +6,25 @@ line "<!-- tg", then 2-4 short lines in Russian for users (what is new, what is 
 then close it like any HTML comment. The release notes carry it, and the chat bot posts those lines.
 -->
 
+## [1.4.0] - 2026-11-22
+
+### Added
+- **How the pain went (#11):** change the strength while a spell lasts and each change is kept with its time – «8:00 – 3 → 9:10 – 5 → 10:00 – 3 · eased at 11:00». The line is in «I feel bad», in the diary and in the report for the doctor; the spell's strength is its worst point.
+- **What you took, in your own words (#11):** «+ Other» under «Took» for something that isn't on the sill.
+
+### Changed
+- **The widget fills its space:** the pet with its name and state on top, five buttons across the whole width below, and it can be stretched in height.
+- **Food on the widget opens the app** and is noted there, with «How did you eat?» at once. Water, a pill and sleep are still noted on the widget itself.
+
+### Fixed
+- **A press on the widget is seen to work (#13):** the widget is redrawn before the press is let go – before, the system could freeze the app first, the sleep button looked untouched and a second press undid it. While the pet sleeps the widget says «✓ Asleep since …» with the button lit, and water or a pill just noted says so too. An accidental double tap no longer undoes the first one.
+
+<!-- tg
+Виджет теперь показывает, что нажатие сработало: «✓ Спит с …», «✓ Вода записана», – и занимает всё своё место; еда открывает приложение с вопросом «Как поел?»
+При приступе можно менять силу – время каждого изменения сохранится и попадёт в отчёт для врача
+В «Принял» появилось «+ Другое» для того, чего нет на подоконнике
+-->
+
 ## [1.3.1] - 2026-11-20
 
 ### Fixed
