@@ -14,6 +14,7 @@ import app.caregotchi.domain.Mood
 import app.caregotchi.domain.Stage
 import app.caregotchi.domain.tr
 import app.caregotchi.domain.hhmm
+import app.caregotchi.domain.dayOf
 import app.caregotchi.domain.minuteOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -65,8 +66,20 @@ object Widget {
                 val low = listOf(n.eat to tr("голоден", "hungry"), n.water to tr("хочет пить", "thirsty"), n.pill to tr("ждёт лекарство", "waiting for medicine")).filter { it.first < .4 }.joinToString(", ") { it.second }
                 // asleep: when the bed was marked, so a press is seen to have worked (#13)
                 val bedAt = if (b.asleep) b.marks.filter { it.kind == "sleep" }.maxByOrNull { it.at }?.at else null
-                v.setTextViewText(R.id.state, if (bedAt != null) tr("✓ Спит с ", "✓ Asleep since ") + hhmm(minuteOf(bedAt))
-                    else moodText(mood, b.asleep) + if (low.isNotEmpty()) " · $low" else "")
+                // a press just made says so, or it looks as if nothing happened (#13): food, water, a pill in the last ten minutes
+                val now = System.currentTimeMillis()
+                val today = b.marks.filter { dayOf(it.at) == dayOf(now) }
+                val just = b.marks.filter { it.kind in setOf("eat", "water", "pill") && now - it.at < 10 * 60_000 }.maxByOrNull { it.at }
+                val done = just?.let { m -> "✓ " + when (m.kind) {
+                    "water" -> tr("Вода записана · сегодня ", "Water noted · today ") + today.count { it.kind == "water" }
+                    "eat" -> tr("Еда записана в ", "Meal noted at ") + hhmm(minuteOf(m.at))
+                    else -> tr("Лекарство записано в ", "Medicine noted at ") + hhmm(minuteOf(m.at))
+                } }
+                v.setTextViewText(R.id.state, when {
+                    done != null -> done
+                    bedAt != null -> tr("✓ Спит с ", "✓ Asleep since ") + hhmm(minuteOf(bedAt))
+                    else -> moodText(mood, b.asleep) + if (low.isNotEmpty()) " · $low" else ""
+                })
                 fun act(code: Int, a: String) = PendingIntent.getBroadcast(app, 9000 + code, Intent(app, ActionReceiver::class.java).putExtra("act", a), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                 v.setOnClickPendingIntent(R.id.eat, act(1, "eat"))
                 v.setOnClickPendingIntent(R.id.water, act(2, "water"))
