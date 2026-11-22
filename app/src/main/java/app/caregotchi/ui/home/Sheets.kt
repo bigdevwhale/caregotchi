@@ -157,7 +157,8 @@ fun Sheets(d: Data, nav: Nav) {
         }
         sheet == "pill" -> Sheet(close) {
             Text(tr("Лекарства", "Medicine"), style = T.h2)
-            val left = d.book.dosesLeft()
+            // the doses due now first (#20)
+            val left = d.book.dosesLeft().sortedBy { kotlin.math.abs(it.second - d.book.nowMin) > 120 }
             if (left.isEmpty() && d.activeMeds.none { it.asNeeded }) Text(tr("Лекарств пока нет. Добавьте их на подоконнике.", "No medicine yet. Add it on the windowsill."), style = T.small)
             left.forEach { (m, slot) ->
                 Row(Modifier.fillMaxWidth().clickable { scope.launch { c.log("pill", med = m.id, slot = slot) }; close() }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {

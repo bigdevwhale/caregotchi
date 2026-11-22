@@ -277,7 +277,7 @@ fun MedPage(id: Long, d: Data, nav: Nav) {
                 }
                 Text(tr("Какие приёмы пищи", "Which meals"), style = T.sec, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    mealTimes.forEachIndexed { i, t -> Chip(word(MEALS, Plan.mealOf(t)) + " " + hhmm(t), i in meals) { meals = if (i in meals) meals - i else (meals + i).sorted() } }
+                    mealTimes.forEachIndexed { i, t -> Chip(word(MEALS, Plan.names(mealTimes)[i]) + " " + hhmm(t), i in meals) { meals = if (i in meals) meals - i else (meals + i).sorted() } }
                 }
                 Text(if (linked) tr("Напомню в ${shown.joinToString(", ") { hhmm(it) }}", "Reminders at ${shown.joinToString(", ") { hhmm(it) }}") +
                     (if (food == 3) tr(" – а если поедите позже, напоминание сдвинется следом.", " – and if you eat later, the reminder follows.") else ".")

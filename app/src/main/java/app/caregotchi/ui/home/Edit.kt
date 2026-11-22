@@ -178,14 +178,14 @@ fun AddSheet(day: Long, d: Data, nav: Nav) {
             } }
             else -> {
                 val last = d.marks.firstOrNull { it.kind == "bp" }
-                val items = listOf(Triple("eat", "icon_${Plan.mealOf(min)}", kindTitle("eat")), Triple("water", "icon_water", tr("Стакан воды", "Water")),
+                val items = listOf(Triple("eat", "icon_${Plan.mealAt(d.s.mealTimes, min)}", kindTitle("eat")), Triple("water", "icon_water", tr("Стакан воды", "Water")),
                     Triple("pill", "icon_pill", kindTitle("pill")), Triple("move", "icon_walk", kindTitle("move")), Triple("caf", "drink_coffee", kindTitle("caf")),
                     Triple("bp", "icon_tonometer", kindTitle("bp")), Triple("sleep", "icon_sleep", kindTitle("sleep")), Triple("wake", "icon_sunrise", kindTitle("wake")),
                     Triple("bad", "icon_thermo", tr("Было плохо", "Felt bad"))) +
                     (if (d.s.cycle && !d.book.onPeriod(dayOf(at))) listOf(Triple(PERIOD, "icon_period", tr("Начались месячные", "Period began"))) else emptyList())
                 PicGrid(items, 3, gap = 6.dp) { (k, icon, label), mod -> PicTile(icon, label, false, mod, pic = 40.dp) {
                     when (k) {
-                        "eat" -> log("eat", sub = Plan.mealOf(min))
+                        "eat" -> log("eat", sub = Plan.mealAt(d.s.mealTimes, min))
                         "move" -> log("move", sub = "walk", mins = 30)
                         "caf" -> log("caf", sub = "coffee", mins = 95)
                         "bp" -> log("bp", sys = last?.sys ?: 120, dia = last?.dia ?: 80)

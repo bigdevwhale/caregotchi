@@ -112,7 +112,7 @@ class RemindReceiver : BroadcastReceiver() {
                     tr("Первый приём – в ${hhmm(m.timeList().firstOrNull() ?: 0)}. $pet напомнит.", "The first dose is at ${hhmm(m.timeList().firstOrNull() ?: 0)}. $pet will remind you."), open = "med:${m.id}")
             }
             "meal" -> if (Plan.hungry(b, s, p.meal)) Reminders.post(ctx, 20, Reminders.CH_CARE, tr("$pet: пора поесть", "$pet is hungry"),
-                when (Plan.mealOf(s.mealTimes[p.meal])) { "breakfast" -> tr("Завтракаем? Я – кашу.", "Breakfast? Porridge for me."); "lunch" -> tr("Обед! Без него я грустнею.", "Lunch! I get glum without it.")
+                when (Plan.names(s.mealTimes)[p.meal]) { "breakfast" -> tr("Завтракаем? Я – кашу.", "Breakfast? Porridge for me."); "lunch" -> tr("Обед! Без него я грустнею.", "Lunch! I get glum without it.")
                     "dinner" -> tr("Ужинать пора.", "Dinner time."); else -> tr("Перекусим? По часам – так по часам.", "A bite? On the clock it is.") },
                 listOf(tr("Поел{|а}", "Ate").let(::g) to eatPI))
             "water" -> if (d.water < s.waterGoal * (min - s.wake) / (s.bedtime - s.wake).coerceAtLeast(60))
@@ -155,7 +155,7 @@ class ActionReceiver : BroadcastReceiver() {
                 } else c.log("pill", med = med, slot = slot)
                 NotificationManagerCompat.from(ctx).cancel((med * 10 + slot / 60).toInt())
             }
-            "eat" -> { c.log("eat", sub = mealNow()); NotificationManagerCompat.from(ctx).cancel(20) }
+            "eat" -> { c.log("eat", sub = mealNow(c.settings.now().mealTimes)); NotificationManagerCompat.from(ctx).cancel(20) }
             "water" -> { c.log("water"); NotificationManagerCompat.from(ctx).cancel(21) }
             // a second press within three seconds is an accidental double tap: it doesn't undo the first (#13)
             "sleep" -> { val last = c.book().marks.filter { it.kind == "sleep" || it.kind == "wake" }.maxByOrNull { it.at }
@@ -175,5 +175,5 @@ class BootReceiver : BroadcastReceiver() {
 }
 
 /** The meal that fits the hour. */
-fun mealNow(at: Long = System.currentTimeMillis()): String = Plan.mealOf(minuteOf(at))
+fun mealNow(times: List<Int>, at: Long = System.currentTimeMillis()): String = Plan.mealAt(times, minuteOf(at))
 

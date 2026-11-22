@@ -56,6 +56,26 @@ object Plan {
         return b.marksOn(b.today).none { it.kind == "eat" && minuteOf(it.at) >= from }
     }
 
+    /**
+     * What each of one's meals is called (#19), by its place among them rather than by the clock alone: with meals at
+     * 11:30 and 14:00 both used to be «lunch», so the 11:30 reminder spoke of lunch. The first is breakfast (if before
+     * 11:00), the last dinner (from 16:00), the middle one nearest 13:30 between 11:00 and 16:00 lunch, the rest snacks.
+     */
+    fun names(times: List<Int>): List<String> {
+        if (times.size <= 1) return times.map { mealOf(it) }
+        val out = MutableList(times.size) { "snack" }
+        if (times.first() < 11 * 60) out[0] = "breakfast"
+        if (times.last() >= 16 * 60) out[times.lastIndex] = "dinner"
+        times.indices.filter { out[it] == "snack" && times[it] in 11 * 60 until 16 * 60 }.minByOrNull { kotlin.math.abs(times[it] - 13 * 60 - 30) }?.let { out[it] = "lunch" }
+        return out
+    }
+
+    /** The name of the meal nearest minute [min] in one's own times (within two hours), else by the clock. */
+    fun mealAt(times: List<Int>, min: Int): String {
+        val i = times.indices.minByOrNull { kotlin.math.abs(times[it] - min) }?.takeIf { kotlin.math.abs(times[it] - min) <= 120 } ?: return mealOf(min)
+        return names(times)[i]
+    }
+
     /** What a meal at minute [min] is called. */
     fun mealOf(min: Int): String = when (min) {
         in 4 * 60 until 11 * 60 -> "breakfast"

@@ -98,7 +98,7 @@ fun HomeScreen(d: Data, nav: Nav) {
         after(r.id)
     }
 
-    val onEat = { mark("eat", 3, tr("Ням! Каша – лучшая еда для нас обоих.", "Yum! Porridge is the best food for us both."), mealNow()) { id -> nav.sheet = "rate:$id" } }
+    val onEat = { mark("eat", 3, tr("Ням! Каша – лучшая еда для нас обоих.", "Yum! Porridge is the best food for us both."), mealNow(d.s.mealTimes)) { id -> nav.sheet = "rate:$id" } }
     val onWater = { mark("water", 4, tr("Буль-буль. Вода – это хорошо.", "Glug glug. Water is good.")) }
     // food or water pressed on the widget: the app opens and it's done here, with the pet's word and the meal's sheet
     LaunchedEffect(app.caregotchi.ui.Start.act) {
@@ -115,11 +115,8 @@ fun HomeScreen(d: Data, nav: Nav) {
         Panel(d, nav,
             onEat = { onEat() },
             onWater = { onWater() },
-            onPill = {
-                val due = d.book.dosesLeft().firstOrNull { kotlin.math.abs(it.second - d.book.nowMin) <= 120 }
-                if (due != null) scope.launch { act.frame = 5; act.line = tr("Моя ягодка! «${due.first.name}» вовремя.", "My berry! «${due.first.name}» on time."); c.log("pill", med = due.first.id, slot = due.second) }
-                else nav.sheet = "pill"
-            },
+            // always the list from the sill, so you pick what you took (#20): with two medicines due, the button used to note the first
+            onPill = { nav.sheet = "pill" },
             onMove = { nav.sheet = "move" },
             onSleep = {
                 if (d.book.asleep) mark("wake", 6, tr("Доброе утро! Потягушки.", "Good morning! Big stretch."))

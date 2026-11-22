@@ -360,7 +360,7 @@ private fun MealTimes(times: List<Int>, onChange: (List<Int>, (Int) -> Int) -> U
             val lo = (times.getOrNull(i - 1) ?: -30) + 30; val hi = (times.getOrNull(i + 1) ?: 1470) - 30
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(C.card2).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("−", style = T.btn.copy(color = if (t - 15 >= lo) C.ink else C.line), modifier = Modifier.clip(CircleShape).clickable(enabled = t - 15 >= lo) { onChange(times.toMutableList().also { it[i] = t - 15 }) { x -> x } }.padding(horizontal = 10.dp))
-                Text(word(MEALS, Plan.mealOf(t)) + " " + hhmm(t), style = T.smallB, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                Text(word(MEALS, Plan.names(times)[i]) + " " + hhmm(t), style = T.smallB, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
                 Text("+", style = T.btn.copy(color = if (t + 15 <= hi) C.ink else C.line), modifier = Modifier.clip(CircleShape).clickable(enabled = t + 15 <= hi) { onChange(times.toMutableList().also { it[i] = t + 15 }) { x -> x } }.padding(horizontal = 10.dp))
                 if (times.size > 1) Text("×", style = T.smallB.copy(color = C.bad), modifier = Modifier.clip(CircleShape).clickable { onChange(times - t) { x -> if (x == i) -1 else if (x > i) x - 1 else x } }.padding(horizontal = 10.dp))
             }

@@ -6,6 +6,17 @@ line "<!-- tg", then 2-4 short lines in Russian for users (what is new, what is 
 then close it like any HTML comment. The release notes carry it, and the chat bot posts those lines.
 -->
 
+## [1.4.1] - 2026-11-22
+
+### Fixed
+- **Meals are named by your own times (#19):** with meals at 11:30 and 14:00 both were called lunch, so the 11:30 reminder spoke of lunch. Now the first meal is breakfast, the last dinner, the one nearest midday lunch and the rest snacks – in reminders, settings and the diary.
+- **«Pill» always shows the list from the sill (#20):** you pick what you took, with the doses due now on top. Before, with a dose due, the button noted the first one at once.
+
+<!-- tg
+Напоминания о еде теперь называются по вашему расписанию: если обед в 14:00, в 11:30 придёт напоминание о перекусе, а не об обеде
+Кнопка «Таблетка» всегда открывает список лекарств с подоконника – отмечаете то, что приняли
+-->
+
 ## [1.4.0] - 2026-11-22
 
 ### Added
