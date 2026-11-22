@@ -76,7 +76,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Where a launch opens: a tab, a page or the dark room (from the widget, notifications or demo intents). */
-object Start { var tab = 2; var open by mutableStateOf<String?>(null) }
+object Start { var tab = 2; var open by mutableStateOf<String?>(null); /** Food or water pressed on the widget: done on the home screen, as by its own button. */ var act by mutableStateOf<String?>(null) }
 
 sealed class Screen {
     data class MedEdit(val id: Long) : Screen()
@@ -129,6 +129,7 @@ fun Root(s: Settings) {
         Start.open = null
         when {
             o == "bad" -> nav.sheet = "bad"
+            o == "eat" || o == "water" -> { nav.tab = 2; Start.act = o }
             o == "pill" -> nav.sheet = "pill"
             o == "quests" -> nav.sheet = "quests"
             o == "settings" -> nav.push(Screen.Settings)

@@ -98,6 +98,13 @@ fun HomeScreen(d: Data, nav: Nav) {
         after(r.id)
     }
 
+    val onEat = { mark("eat", 3, tr("Ням! Каша – лучшая еда для нас обоих.", "Yum! Porridge is the best food for us both."), mealNow()) { id -> nav.sheet = "rate:$id" } }
+    val onWater = { mark("water", 4, tr("Буль-буль. Вода – это хорошо.", "Glug glug. Water is good.")) }
+    // food or water pressed on the widget: the app opens and it's done here, with the pet's word and the meal's sheet
+    LaunchedEffect(app.caregotchi.ui.Start.act) {
+        when (app.caregotchi.ui.Start.act) { "eat" -> onEat(); "water" -> onWater() }
+        app.caregotchi.ui.Start.act = null
+    }
     Column(Modifier.fillMaxSize()) {
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
             Room(d, act, Modifier.fillMaxWidth().requiredHeight(maxWidth * 1.5f).align(Alignment.TopCenter), nav)
@@ -106,8 +113,8 @@ fun HomeScreen(d: Data, nav: Nav) {
             for ((k, r) in floats) androidx.compose.runtime.key(k) { Float(r, Modifier.align(Alignment.Center)) }
         }
         Panel(d, nav,
-            onEat = { mark("eat", 3, tr("Ням! Каша – лучшая еда для нас обоих.", "Yum! Porridge is the best food for us both."), mealNow()) { id -> nav.sheet = "rate:$id" } },
-            onWater = { mark("water", 4, tr("Буль-буль. Вода – это хорошо.", "Glug glug. Water is good.")) },
+            onEat = { onEat() },
+            onWater = { onWater() },
             onPill = {
                 val due = d.book.dosesLeft().firstOrNull { kotlin.math.abs(it.second - d.book.nowMin) <= 120 }
                 if (due != null) scope.launch { act.frame = 5; act.line = tr("Моя ягодка! «${due.first.name}» вовремя.", "My berry! «${due.first.name}» on time."); c.log("pill", med = due.first.id, slot = due.second) }

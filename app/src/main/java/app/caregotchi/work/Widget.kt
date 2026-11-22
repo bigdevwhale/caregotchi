@@ -81,8 +81,9 @@ object Widget {
                     else -> moodText(mood, b.asleep) + if (low.isNotEmpty()) " · $low" else ""
                 })
                 fun act(code: Int, a: String) = PendingIntent.getBroadcast(app, 9000 + code, Intent(app, ActionReceiver::class.java).putExtra("act", a), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-                v.setOnClickPendingIntent(R.id.eat, act(1, "eat"))
-                v.setOnClickPendingIntent(R.id.water, act(2, "water"))
+                // food and water open the app and are noted there, so the meal can be told and the pet answers
+                v.setOnClickPendingIntent(R.id.eat, Reminders.open(app, "eat"))
+                v.setOnClickPendingIntent(R.id.water, Reminders.open(app, "water"))
                 v.setOnClickPendingIntent(R.id.pill, if (b.dosesLeft().isNotEmpty()) act(3, "pill") else Reminders.open(app, "pill"))
                 // bed at night, up in the morning: the button follows whether the pet is asleep
                 v.setImageViewResource(R.id.sleep, if (b.asleep) R.drawable.icon_sunrise else R.drawable.icon_sleep)
