@@ -62,7 +62,7 @@ fun ShopScreen(d: Data, nav: Nav) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Banner("banner_shop", tr("Лавка Барсука", "Badger's shop"), tr("Листики – за каждую заботу о себе", "Leaves come with every bit of self-care")) {
             Box(Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(10.dp).shadow(2.dp, RoundedCornerShape(50)).clip(RoundedCornerShape(50)).background(C.paper).padding(horizontal = 10.dp, vertical = 4.dp)) {
-                Leaves(d.s.leaves)
+                Leaves(d.s.leaves, color = C.inkPaper)
             }
         }
         Column(Modifier.padding(horizontal = 14.dp)) {

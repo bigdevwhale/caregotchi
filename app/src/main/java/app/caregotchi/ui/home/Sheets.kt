@@ -157,23 +157,29 @@ fun Sheets(d: Data, nav: Nav) {
         }
         sheet == "pill" -> Sheet(close) {
             Text(tr("Лекарства", "Medicine"), style = T.h2)
-            // the doses due now first (#20)
-            val left = d.book.dosesLeft().sortedBy { kotlin.math.abs(it.second - d.book.nowMin) > 120 }
+            // the doses due now first (#20); the list is kept as it opened, so a dose just taken stays in it with a tick
+            // and several medicines can be noted one after another before «Done» (#22)
+            val left = remember { d.book.dosesLeft().sortedBy { kotlin.math.abs(it.second - d.book.nowMin) > 120 } }
+            val todays = d.book.marksOn(d.book.today).filter { it.kind == "pill" }
             if (left.isEmpty() && d.activeMeds.none { it.asNeeded }) Text(tr("Лекарств пока нет. Добавьте их на подоконнике.", "No medicine yet. Add it on the windowsill."), style = T.small)
             left.forEach { (m, slot) ->
-                Row(Modifier.fillMaxWidth().clickable { scope.launch { c.log("pill", med = m.id, slot = slot) }; close() }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                val done = todays.firstOrNull { it.med == m.id && it.slot == slot }
+                Row(Modifier.fillMaxWidth().clickable(enabled = done == null) { scope.launch { c.log("pill", med = m.id, slot = slot) } }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                     Art("pot_${m.herb}_1", Modifier.size(36.dp)); Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) { Text(m.name + if (m.dose.isNotBlank()) " · ${m.dose}" else "", style = T.bodyB); Text(hhmm(slot) + app.caregotchi.domain.doseNote(m, d.book.today).let { if (it.isEmpty()) "" else " · $it" } + app.caregotchi.domain.Plan.foodWord(m).let { if (it.isEmpty()) "" else " · $it" }, style = T.small) }
-                    Text(tr("Принял{|а}", "Taken").let(::g), style = T.smallB.copy(color = C.acc))
+                    Column(Modifier.weight(1f)) { Text(m.name + if (m.dose.isNotBlank()) " · ${m.dose}" else "", style = T.bodyB.copy(color = if (done != null) C.mute else C.ink)); Text(hhmm(slot) + app.caregotchi.domain.doseNote(m, d.book.today).let { if (it.isEmpty()) "" else " · $it" } + app.caregotchi.domain.Plan.foodWord(m).let { if (it.isEmpty()) "" else " · $it" }, style = T.small) }
+                    Text(if (done != null) "✓ " + hhmm(minuteOf(done.at)) else tr("Принял{|а}", "Taken").let(::g), style = T.smallB.copy(color = if (done != null) C.mute else C.acc))
                 }
             }
             d.activeMeds.filter { it.asNeeded }.forEach { m ->
-                Row(Modifier.fillMaxWidth().clickable { scope.launch { c.log("pill", med = m.id) }; close() }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                // taken as needed can be taken again, but not by a double tap
+                val last = todays.filter { it.med == m.id }.maxByOrNull { it.at }
+                Row(Modifier.fillMaxWidth().clickable { if (last == null || System.currentTimeMillis() - last.at > 3_000) scope.launch { c.log("pill", med = m.id) } }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                     Art("pot_${m.herb}_1", Modifier.size(36.dp)); Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) { Text(m.name, style = T.bodyB); Text(tr("по необходимости", "as needed"), style = T.small) }
+                    Column(Modifier.weight(1f)) { Text(m.name, style = T.bodyB); Text(tr("по необходимости", "as needed") + if (last != null) tr(" · сегодня в ${hhmm(minuteOf(last.at))}", " · today at ${hhmm(minuteOf(last.at))}") else "", style = T.small) }
                     Text(tr("Принял{|а}", "Taken").let(::g), style = T.smallB.copy(color = C.acc))
                 }
             }
+            if (left.isNotEmpty() || d.activeMeds.any { it.asNeeded }) Btn(tr("Готово", "Done"), Modifier.fillMaxWidth().padding(top = 10.dp)) { close() }
             Ghost(tr("Добавить лекарство", "Add medicine"), Modifier.fillMaxWidth().padding(top = 10.dp)) { close(); nav.push(Screen.MedEdit(0)) }
         }
         sheet == "bad" -> Sheet(close) {

@@ -227,9 +227,9 @@ fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Uni
 
 /** A leaf count with its coin. */
 @Composable
-fun Leaves(n: Int, modifier: Modifier = Modifier, size: Dp = 22.dp) {
+fun Leaves(n: Int, modifier: Modifier = Modifier, size: Dp = 22.dp, color: Color = C.ink) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Art("icon_leaf", Modifier.size(size)); Spacer(Modifier.width(3.dp)); Text("$n", style = T.num)
+        Art("icon_leaf", Modifier.size(size)); Spacer(Modifier.width(3.dp)); Text("$n", style = T.num.copy(color = color))
     }
 }
 

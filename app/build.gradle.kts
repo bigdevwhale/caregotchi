@@ -135,4 +135,5 @@ tasks.withType<Test>().configureEach {
     systemProperty("render.out", layout.buildDirectory.dir("art").get().asFile.absolutePath)
     (project.findProperty("cover") as String?)?.let { systemProperty("render.cover", it) }
     (project.findProperty("lang") as String?)?.let { systemProperty("render.lang", it) }
+    (project.findProperty("dark") as String?)?.let { systemProperty("render.dark", it) }
 }

@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.res.imageResource
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -134,7 +136,11 @@ private fun Room(d: Data, act: Act, modifier: Modifier, nav: Nav) {
         Art("room_bg", Modifier.fillMaxSize(), ContentScale.FillBounds)
         // the bought things, back to front
         for (it in Shop.cozy.filter { it.id in s.items && it.id !in s.hidden }.sortedBy { it.y }) {
-            Art("item_${it.id}", Modifier.offset(w * it.x, h * it.y).width(w * it.w))
+            // the height follows the picture's own shape: with the width alone a wide picture (the garland, #17) kept its
+            // pixel height and was shrunk to a fifth of the room
+            val id = app.caregotchi.ui.components.resId("item_${it.id}")
+            val ratio = if (id == 0) 1f else androidx.compose.ui.graphics.ImageBitmap.imageResource(id).let { b -> b.width.toFloat() / b.height }
+            Art("item_${it.id}", Modifier.offset(w * it.x, h * it.y).width(w * it.w).aspectRatio(ratio))
         }
         // one pot a regular medicine on the sill
         val pots = d.activeMeds.filter { !it.asNeeded }.take(4)
@@ -192,7 +198,8 @@ fun talk(d: Data): String {
         else -> {}
     }
     if (s.pressureWarn && o != null && o.fall <= -6) return tr("Давление падает на ${fmt1(-o.fall)} гПа. Держи таблетку под рукой.", "The pressure is falling ${fmt1(-o.fall)} hPa. Keep a pill close.")
-    val due = b.dosesLeft().firstOrNull { it.second <= b.nowMin }
+    // a dose missed long ago isn't asked for all day (#21): three hours after its time the pet lets it go
+    val due = b.dosesLeft().firstOrNull { it.second <= b.nowMin && b.nowMin - it.second <= 180 }
     if (due != null) return tr("Пора «${due.first.name}». Я жду свою ягодку!", "Time for «${due.first.name}». I'm waiting for my berry!")
     val t = b.todayCare
     return when {
@@ -236,7 +243,7 @@ private fun Hud(d: Data, nav: Nav, modifier: Modifier) {
                     Art("icon_gear", Modifier.size(24.dp))
                 }
                 Spacer(Modifier.width(6.dp))
-                Pill(Modifier.clickable { nav.tab = 4 }) { Leaves(d.s.leaves, size = 22.dp) }
+                Pill(Modifier.clickable { nav.tab = 4 }) { Leaves(d.s.leaves, size = 22.dp, color = C.inkPaper) /* the pill is paper in both themes (#16) */ }
             }
             Pill { Art("icon_flame", Modifier.size(22.dp)); Spacer(Modifier.width(3.dp)); Text(tr("${d.book.streak} дн.", "${d.book.streak} d"), style = T.num.copy(color = C.inkPaper)) }
             Outside.of(d.s.outside)?.let { o ->

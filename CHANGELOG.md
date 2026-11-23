@@ -6,6 +6,22 @@ line "<!-- tg", then 2-4 short lines in Russian for users (what is new, what is 
 then close it like any HTML comment. The release notes carry it, and the chat bot posts those lines.
 -->
 
+## [1.4.2] - 2026-11-23
+
+### Fixed
+- **A medicine's page no longer closes the app (#21):** a course that began before today, with the pills counted and the same dose every day, crashed on opening its pot.
+- **A dose missed in the morning isn't asked for all day (#21):** three hours after its time the pet stops calling for it, and «Pill» on the widget notes the dose nearest now, not that morning one.
+- **«Pill» lets you note several medicines (#22):** «Taken» no longer closes the list – a dose taken gets a tick with its time, and «Done» closes it.
+- **The leaves count is seen by candlelight (#16):** on the home screen and in the shop it was light on light paper.
+- **The fairy lights hang over the window (#17):** they were drawn a fifth of their size behind the top bar. The hammock and the rocking chair now keep their full size too.
+
+<!-- tg
+Исправили вылет при нажатии на растение на подоконнике
+Пропущенное утром лекарство больше не требуется весь день
+В «Таблетке» можно отметить несколько лекарств подряд – список закрывается кнопкой «Готово»
+Листики видно в теме «При свече», а гирлянда висит над окном во всю ширину
+-->
+
 ## [1.4.1] - 2026-11-22
 
 ### Fixed

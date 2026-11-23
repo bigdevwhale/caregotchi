@@ -174,7 +174,7 @@ class Item(val id: String, val ru: String, val en: String, val price: Int, val l
 
 object Shop {
     val cozy = listOf(
-        Item("lights", "Гирлянда", "Fairy lights", 60, 0, .12f, .005f, .76f),
+        Item("lights", "Гирлянда", "Fairy lights", 60, 0, .18f, .07f, .64f),
         Item("lantern", "Фонарик", "Paper lantern", 65, 0, .30f, .045f, .08f),
         Item("painting", "Картина «Горы»", "Mountain painting", 90, 0, .71f, .19f, .16f),
         Item("plush", "Плюшевый мишка", "Teddy bear", 80, 0, .70f, .66f, .12f),

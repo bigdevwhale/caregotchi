@@ -209,7 +209,8 @@ private fun Slips(d: Data, nav: Nav) {
 
 /** The cycle as kept, in the user's order, with «@k» when the course's first day [from] was day k of it – so that today is day [todayIdx]. */
 private fun stored(cycle: List<Int>, todayIdx: Int, from: Long): String {
-    if (from > today()) return cycle.joinToString(",")
+    // the same dose every day has no cycle: nothing to count, and a running course would divide by zero (#21)
+    if (from > today() || cycle.isEmpty()) return cycle.joinToString(",")
     val k = Math.floorMod(todayIdx - (today() - from), cycle.size.toLong()).toInt()
     return cycle.joinToString(",") + if (k != 0) ",@$k" else ""
 }

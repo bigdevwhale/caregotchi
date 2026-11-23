@@ -150,7 +150,9 @@ class ActionReceiver : BroadcastReceiver() {
             "pill" -> {
                 val med = intent.getLongExtra("med", 0); val slot = intent.getIntExtra("slot", -1)
                 if (med == 0L) {
-                    val next = c.book().dosesLeft().firstOrNull()
+                    // the dose nearest now, not a morning one missed hours ago (#21)
+                    val b = c.book()
+                    val next = b.dosesLeft().minByOrNull { abs(it.second - b.nowMin) }
                     if (next != null) c.log("pill", med = next.first.id, slot = next.second)
                 } else c.log("pill", med = med, slot = slot)
                 NotificationManagerCompat.from(ctx).cancel((med * 10 + slot / 60).toInt())
