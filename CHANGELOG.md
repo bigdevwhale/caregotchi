@@ -6,6 +6,25 @@ line "<!-- tg", then 2-4 short lines in Russian for users (what is new, what is 
 then close it like any HTML comment. The release notes carry it, and the chat bot posts those lines.
 -->
 
+## [1.4.3] - 2026-11-25
+
+### Added
+- **«Carbs» on the plate (#14):** porridge, pasta, bread – a fifth thing to tick after a meal, beside vegetables, fruit, protein and sweets.
+- **Tomorrow's tasks (#23):** the tasks window shows tomorrow's three under today's, so you can get ready for them.
+
+### Changed
+- **«Up on time» keeps to your own morning (#23):** the task asks to be up by half an hour after the wake-up time in the settings, not by eight for everyone.
+- **The Sunday letter speaks of your breakfasts (#24):** what was most often in them – porridge and bread, protein, vegetables – instead of a porridge the pet made up.
+
+### Fixed
+- **Words agree with numbers (#24):** «4 хороших дня» in the letter, «1 хороший» on the quilt, «ещё один хороший день» on the egg.
+
+<!-- tg
+В еде появились «Углеводы» – каша, макароны, хлеб
+В заданиях видно, что будет завтра, а «встать вовремя» считается от вашего времени подъёма
+Письмо питомца теперь рассказывает о ваших завтраках и пишет «4 хороших дня» без ошибок
+-->
+
 ## [1.4.2] - 2026-11-23
 
 ### Fixed

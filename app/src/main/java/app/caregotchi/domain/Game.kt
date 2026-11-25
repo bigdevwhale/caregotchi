@@ -112,8 +112,9 @@ object Pay {
 }
 
 /** A small task for the day; [progress] gets the day and the settings (for the goals). */
-class Quest(val id: String, val ru: String, val en: String, val icon: String, val leaves: Int, val of: Int, val needsMeds: Boolean = false, val progress: (Day, Settings) -> Int) {
-    val text get() = tr(ru, en)
+class Quest(val id: String, val ru: String, val en: String, val icon: String, val leaves: Int, val of: Int, val needsMeds: Boolean = false,
+            val say: ((Settings) -> String)? = null, val progress: (Day, Settings) -> Int) {
+    fun text(s: Settings) = say?.invoke(s) ?: tr(ru, en)
 }
 
 object Quests {
@@ -129,12 +130,15 @@ object Quests {
         Quest("veg", "Съесть овощи или фрукты", "Eat vegetables or fruit", "eat", 10, 1) { d, _ -> if (d.veg) 1 else 0 },
         Quest("wholesome", "Два полезных приёма пищи", "Two wholesome meals", "eat", 15, 2) { d, _ -> d.wholesome.coerceAtMost(2) },
         Quest("dinner", "Поужинать", "Have dinner", "eat", 10, 1) { d, _ -> if (d.dinner) 1 else 0 },
-        Quest("morning", "Встать до восьми", "Up before eight", "sunrise", 10, 1) { d, _ -> if (d.wokeEarly) 1 else 0 },
+        // by one's own wake-up time, not eight for everyone (#23): half an hour to spare
+        Quest("morning", "Встать вовремя", "Up on time", "sunrise", 10, 1, say = { s -> tr("Встать до ${hhmm(Quests.upBy(s))}", "Up by ${hhmm(Quests.upBy(s))}") }) { d, s -> if (d.wokeAt in 0 until Quests.upBy(s)) 1 else 0 },
         Quest("water4", "Четыре стакана воды", "Four glasses of water", "water", 10, 4) { d, _ -> d.water.coerceAtMost(4) },
     )
     val byId = all.associateBy { it.id }
 
-    /** Three tasks for [day], the same all day. */
+    fun upBy(s: Settings) = s.wake + 30
+
+    /** Three tasks for [day], the same all day – so tomorrow's can be shown today. */
     fun deal(day: Long, hasMeds: Boolean): List<String> =
         all.filter { hasMeds || !it.needsMeds }.shuffled(Random(day * 31 + 7)).take(3).map { it.id }
 }

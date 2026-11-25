@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.Flow
 /**
  * One thing done for yourself. [kind]: eat, water, pill, sleep (went to bed), wake, move.
  * eat: [sub] is breakfast / lunch / dinner / snack; [q] how wholesome (0 not said, 1 fast food or sweets, 2 ordinary, 3 wholesome);
- * [tags] what was in it (veg, fruit, protein, sweet). move: [sub] walk / run / gym / yoga / bike / swim / dance / other, [mins] how long.
+ * [tags] what was in it (veg, fruit, protein, carbs – porridge, pasta, bread (#14) –, sweet). move: [sub] walk / run / gym / yoga / bike / swim / dance / other, [mins] how long.
  * bp: a blood pressure reading – [sys]/[dia] mmHg and [pulse].
  * pill: [med] is the medicine, [slot] the scheduled minute of the day it answers (-1 when taken as needed), [late] minutes after the slot.
  */

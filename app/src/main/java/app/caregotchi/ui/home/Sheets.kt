@@ -42,6 +42,7 @@ import app.caregotchi.container
 import app.caregotchi.data.Attack
 import app.caregotchi.domain.Badges
 import app.caregotchi.domain.Loot
+import app.caregotchi.domain.Quests
 import app.caregotchi.domain.Shop
 import app.caregotchi.domain.Stage
 import app.caregotchi.domain.Troubles
@@ -88,7 +89,7 @@ val MOVES = listOf("walk" to ("Прогулка" to "Walk"), "run" to ("Бег" 
     "bike" to ("Велосипед" to "Bike"), "swim" to ("Плавание" to "Swim"), "dance" to ("Танцы" to "Dance"), "home" to ("Зарядка дома" to "Home workout"), "other" to ("Другое" to "Other"))
 val MEALS = listOf("breakfast" to ("Завтрак" to "Breakfast"), "lunch" to ("Обед" to "Lunch"), "dinner" to ("Ужин" to "Dinner"), "snack" to ("Перекус" to "Snack"))
 val QUALITY = listOf(3 to ("Полезно" to "Wholesome"), 2 to ("Обычно" to "Ordinary"), 1 to ("Фастфуд, сладкое" to "Fast food, sweets"))
-val TAGS = listOf("veg" to ("Овощи" to "Vegetables"), "fruit" to ("Фрукты" to "Fruit"), "protein" to ("Белок" to "Protein"), "sweet" to ("Сладкое" to "Sweets"))
+val TAGS = listOf("veg" to ("Овощи" to "Vegetables"), "fruit" to ("Фрукты" to "Fruit"), "protein" to ("Белок" to "Protein"), "carbs" to ("Углеводы" to "Carbs"), "sweet" to ("Сладкое" to "Sweets"))
 fun word(l: List<Pair<String, Pair<String, String>>>, id: String) = l.firstOrNull { it.first == id }?.second?.let { tr(it.first, it.second) } ?: id
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -116,7 +117,7 @@ fun Sheets(d: Data, nav: Nav) {
                     Text(when (q) { 3 -> tr("Витамины! Я прямо чувствую, как расту.", "Vitamins! I can feel myself growing."); 2 -> tr("Сытно и спокойно.", "Filling and calm.")
                         else -> tr("Вкуснятина! Но давай в следующий раз с овощами?", "Yummy! Vegetables next time?") }, style = T.smallB) } }
                 Text(tr("Что было на тарелке", "What was on the plate"), style = T.sec, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     TAGS.forEach { (id, w) -> Token("icon_$id", tr(w.first, w.second), id in tags) { tags = if (id in tags) tags - id else tags + id } }
                 }
                 Btn(tr("Готово", "Done"), Modifier.fillMaxWidth().padding(top = 18.dp)) {
@@ -220,10 +221,19 @@ fun Sheets(d: Data, nav: Nav) {
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Art("icon_${q.icon}", Modifier.size(36.dp)); Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(q.text, style = T.bodyB.copy(color = if (ok) C.mute else C.ink, textDecoration = if (ok) androidx.compose.ui.text.style.TextDecoration.LineThrough else null))
+                        Text(q.text(d.s), style = T.bodyB.copy(color = if (ok) C.mute else C.ink, textDecoration = if (ok) androidx.compose.ui.text.style.TextDecoration.LineThrough else null))
                         Text(if (ok) tr("готово", "done") else "$p / ${q.of}", style = T.small)
                     }
                     Text("+${q.leaves}", style = T.num); Art("icon_leaf", Modifier.size(22.dp))
+                }
+            }
+            // tomorrow's are dealt by the date, so they can be known ahead – to get up earlier, say (#23)
+            Text(tr("Завтра", "Tomorrow"), style = T.smallB, modifier = Modifier.padding(top = 12.dp, bottom = 2.dp))
+            Quests.deal(today() + 1, d.activeMeds.any { !it.asNeeded }).mapNotNull { Quests.byId[it] }.forEach { q ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Art("icon_${q.icon}", Modifier.size(26.dp), alpha = .6f); Spacer(Modifier.width(10.dp))
+                    Text(q.text(d.s), style = T.small, modifier = Modifier.weight(1f))
+                    Text("+${q.leaves}", style = T.small); Art("icon_leaf", Modifier.size(16.dp), alpha = .6f)
                 }
             }
             Spacer(Modifier.height(8.dp))

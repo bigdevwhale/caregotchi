@@ -95,7 +95,7 @@ fun MarkSheet(id: Long, d: Data, nav: Nav) {
                 Text(tr("Насколько полезно", "How wholesome"), style = T.sec, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
                 PicGrid(QUALITY, 3) { (v, w), mod -> PicTile(qualityIcon(v), tr(w.first, w.second), m.q == v, mod, pic = 44.dp) { m = m.copy(q = if (m.q == v) 0 else v) } }
                 val tags = m.tags.split(',').filter { it.isNotBlank() }.toSet()
-                Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                FlowRow(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     TAGS.forEach { (sid, w) -> Token("icon_$sid", tr(w.first, w.second), sid in tags) { m = m.copy(tags = (if (sid in tags) tags - sid else tags + sid).joinToString(",")) } }
                 }
             }

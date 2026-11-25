@@ -180,10 +180,11 @@ object Letter {
         lines += tr("Привет! Это $petName.", "Hi! It's $petName.")
         lines += when {
             good >= 6 -> tr("Какая хорошая была неделя: $good дней из семи мы с тобой жили как надо.", "What a good week: $good days of seven we did it right.")
-            good >= 3 -> tr("Неделя была ничего: $good хороших дней.", "Not a bad week: $good good days.")
+            good >= 3 -> tr("Неделя была ничего: $good ${plural(good.toLong(), "хороший день", "хороших дня", "хороших дней")}.", "Not a bad week: $good good days.")
             else -> tr("Неделя вышла непростая. Ничего, бывает – я никуда не ухожу.", "It was a hard week. That's all right – I'm not going anywhere.")
         }
-        if (breakfasts > 0) lines += tr("Мы завтракали $breakfasts ${plural(breakfasts.toLong(), "раз", "раза", "раз")} – мне очень нравится утренняя каша.", "We had breakfast $breakfasts times – I love the morning porridge.")
+        if (breakfasts > 0) lines += tr("Мы завтракали ${count(breakfasts, "раз", "раза", "раз", "", "")}", "We had breakfast ${if (breakfasts == 1) "once" else "$breakfasts times"}") +
+            " – " + breakfastWords((monday..monday + 6).flatMap { b.marksOn(it) }.filter { it.kind == "eat" && it.sub == "breakfast" })
         if (due > 0) lines += if (taken >= due) tr("Ни одного пропуска лекарств! Горшки на окне цветут.", "Not one dose missed! The pots on the sill are in bloom.")
         else tr("Лекарства: $taken из $due. Давай я буду напоминать погромче?", "Medicine: $taken of $due. Shall I remind you louder?")
         if (spells > 0) lines += tr("Голова болела ${count(spells, "раз", "раза", "раз", "time", "times")}. Всё записано – так мы быстрее поймём, откуда это берётся.",
@@ -201,4 +202,20 @@ object Letter {
         lines += "– $petName"
         return lines.joinToString("\n")
     }
+
+    /** What the pet says of the week's breakfasts: from what was most often in them (#24), not a porridge it made up. */
+    fun breakfastWords(eats: List<app.caregotchi.data.Mark>): String {
+        val top = eats.flatMap { m -> m.tags.split(',').filter { it.isNotBlank() } }.groupingBy { it }.eachCount()
+            .entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { ORDER.indexOf(it.key) }).firstOrNull()?.key
+        return when (top) {
+            "carbs" -> tr("каша и хлебушек по утрам – это я люблю.", "porridge and bread in the morning – just how I like it.")
+            "protein" -> tr("с белковым завтраком сил хватает до самого обеда.", "a breakfast with protein keeps me going till lunch.")
+            "veg" -> tr("даже с овощами! Хрум-хрум.", "with vegetables, even! Crunch, crunch.")
+            "fruit" -> tr("фрукты по утрам – это вкусно.", "fruit in the morning – so tasty.")
+            "sweet" -> tr("бывало и сладкое. Иногда можно.", "some of it sweet. Now and then that's fine.")
+            else -> if (eats.any { it.q == 3 }) tr("и полезно, мне понравилось.", "and wholesome too, I liked it.")
+                else tr("с завтраком день идёт веселее.", "a day with breakfast goes better.")
+        }
+    }
+    private val ORDER = listOf("carbs", "protein", "veg", "fruit", "sweet")
 }

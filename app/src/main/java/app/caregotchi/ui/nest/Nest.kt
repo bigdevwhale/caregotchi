@@ -142,7 +142,7 @@ private fun Incubator(d: Data, st: app.caregotchi.domain.Stats) {
     val r by t.animateFloat(-1f, 1f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "r")
     val (sp, frac, text) = if (egg != null) {
         val good = (egg.found..today()).count { d.book.care(it)?.good == true }
-        Triple(Zoo.of(egg.species), (good / 2f).coerceAtMost(1f), tr("Тёплое яйцо. Ещё ${(2 - good).coerceAtLeast(0)} хороших дня – и вылупится.", "A warm egg. ${(2 - good).coerceAtLeast(0)} more good days and it hatches."))
+        Triple(Zoo.of(egg.species), (good / 2f).coerceAtMost(1f), (2 - good).coerceAtLeast(0).let { n -> if (n == 0) tr("Тёплое яйцо. Вот-вот вылупится.", "A warm egg. It's about to hatch.") else tr("Тёплое яйцо. Ещё ${if (n == 1) "один хороший день" else "$n хороших дня"} – и вылупится.", "A warm egg. ${if (n == 1) "One more good day" else "$n more good days"} and it hatches.") })
     } else {
         val owned = d.pets.map { it.species }.toSet()
         val next = Zoo.all.filter { it.id !in owned }.maxByOrNull { it.progress(st) / it.need.toFloat() }

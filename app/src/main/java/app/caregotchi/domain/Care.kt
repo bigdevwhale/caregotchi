@@ -32,6 +32,7 @@ data class Day(
     val slept: Double = -1.0,       // hours slept the night that ended this morning; -1 unknown
     val bedEarly: Boolean = false,  // went to bed between 20:00 and midnight
     val wokeEarly: Boolean = false, // up before 8
+    val wokeAt: Int = -1,           // minute of the day of the first wake-up mark; -1 none
     val moves: Int = 0,
     val moveMins: Int = 0,
     val caffeine: Int = 0,          // mg of caffeine that day
@@ -140,6 +141,7 @@ class Book(
             water = water, waterNoon = ms.count { it.kind == "water" && minuteOf(it.at) < 12 * 60 },
             due = due, taken = taken, onTime = pills.count { it.late <= 60 }, slept = slept,
             bedEarly = beds.any { it in 20 * 60 until 24 * 60 }, wokeEarly = ms.any { it.kind == "wake" && minuteOf(it.at) < 8 * 60 },
+            wokeAt = ms.filter { it.kind == "wake" }.minOfOrNull { minuteOf(it.at) } ?: -1,
             caffeine = ms.filter { it.kind == "caf" }.sumOf { it.mins }, lateCaffeine = ms.any { it.kind == "caf" && minuteOf(it.at) >= 16 * 60 },
             moves = moves.size, moveMins = moves.sumOf { it.mins }, wholesome = eats.count { it.q == 3 }, junk = eats.count { it.q == 1 },
             veg = eats.any { "veg" in it.tags || "fruit" in it.tags }, attacks = att.size, period = onPeriod(day), cycleDay = cycleDay(day), toNext = next?.let { (it - day).toInt() }?.takeIf { it <= 60 } ?: 0, plaid = plaid, marks = ms.size, painPill = painPill || att.any { a -> a.list(a.took).any { (it.toLongOrNull()?.let { id -> medById[id]?.pain } ?: 0) > 0 } },

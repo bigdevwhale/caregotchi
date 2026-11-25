@@ -56,6 +56,7 @@ import app.caregotchi.domain.fmtDay
 import app.caregotchi.domain.hhmm
 import app.caregotchi.domain.minuteOf
 import app.caregotchi.domain.monthName
+import app.caregotchi.domain.plural
 import app.caregotchi.domain.today
 import app.caregotchi.domain.tr
 import app.caregotchi.domain.weekStart
@@ -161,7 +162,7 @@ fun QuiltPane(d: Data, nav: Nav) {
             val spells = days.sumOf { it.attacks }; val good = days.count { it.good }
             Column(Modifier.align(Alignment.BottomEnd).offset(x = (-8).dp, y = 14.dp).rotate(-3f).shadow(3.dp, RoundedCornerShape(3.dp)).clip(RoundedCornerShape(3.dp))
                 .background(C.paper).border(1.5.dp, Color(0xFFC98B86), RoundedCornerShape(3.dp)).padding(horizontal = 10.dp, vertical = 5.dp)) {
-                Text(tr("$good хороших · $spells ${if (spells == 1) "приступ" else if (spells in 2..4) "приступа" else "приступов"}", "$good good · $spells spells"), style = T.tiny.copy(color = Color(0xFF3B2E26)))
+                Text(tr("$good ${plural(good.toLong(), "хороший", "хороших", "хороших")} · $spells ${if (spells == 1) "приступ" else if (spells in 2..4) "приступа" else "приступов"}", "$good good · $spells spells"), style = T.tiny.copy(color = Color(0xFF3B2E26)))
             }
         }
     }

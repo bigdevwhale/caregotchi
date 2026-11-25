@@ -147,7 +147,7 @@ fun Root(s: Settings) {
     LaunchedEffect(s.inbox) {
         val q = s.inbox.firstOrNull { it.startsWith("quest:") } ?: return@LaunchedEffect
         val quest = Quests.byId[q.drop(6)]
-        if (quest != null) { val t = tr("Задание выполнено: ${quest.text} · +${quest.leaves}", "Task done: ${quest.text} · +${quest.leaves}"); note = t; scope.launch { delay(2800); if (note == t) note = null } }
+        if (quest != null) { val t = tr("Задание выполнено: ${quest.text(s)} · +${quest.leaves}", "Task done: ${quest.text(s)} · +${quest.leaves}"); note = t; scope.launch { delay(2800); if (note == t) note = null } }
         c.seen(q)
     }
 
