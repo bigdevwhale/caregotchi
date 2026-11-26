@@ -36,6 +36,15 @@ object Plan {
     }
 
     /**
+     * What an alarm set for [at] should say. Checked against the phone's clock too, not only the alarm's own time (#26):
+     * an alarm that came at the wrong hour (a time zone that flipped, a system that held it back or let it out early)
+     * once said «medicine time» for 20:00 doses at half past eleven. Only what is due within 5 minutes, or overdue
+     * by at most 3 hours, is said.
+     */
+    fun due(b: Book, s: Settings, at: Long, now: Long = System.currentTimeMillis()): List<Ping> =
+        of(b, s).filter { abs(it.at - at) < 60_000 && it.at - now <= 5 * 60_000L && now - it.at <= 3 * 3600_000L }
+
+    /**
      * For medicine taken after a meal: once the meal is marked, the reminder moves to the meal's real time plus the gap,
      * so a late lunch moves the pill too (never earlier than planned: then the receiver and the alarm still agree). Milliseconds to add.
      */

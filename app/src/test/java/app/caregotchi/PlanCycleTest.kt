@@ -51,6 +51,18 @@ class PlanCycleTest {
         assertFalse(Plan.hungry(fed, s, 1))
     }
 
+    @Test fun anAlarmAtTheWrongHourSaysNothing() {
+        // #26: an alarm for the 20:00 doses rang at 11:33 – the reminder must check the phone's clock
+        val m = Med(id = 4, name = "Магний", times = "${20 * 60}", from = day - 5)
+        val b = Book(emptyList(), listOf(m), emptyList(), emptyList(), s, at(day, 11, 33))
+        assertTrue(Plan.due(b, s, at(day, 20), now = at(day, 11, 33)).isEmpty())
+        // on time, or a few minutes late, it still rings
+        assertEquals(1, Plan.due(b, s, at(day, 20), now = at(day, 20)).count { it.kind == "pill" })
+        assertEquals(1, Plan.due(b, s, at(day, 20), now = at(day, 20, 40)).count { it.kind == "pill" })
+        // but not when held back for half a day
+        assertTrue(Plan.due(b, s, at(day, 20), now = at(day + 1, 8)).none { it.kind == "pill" })
+    }
+
     @Test fun aPlannedCourseWaitsAndIsAnnouncedTheEveningBefore() {
         val m = Med(id = 3, name = "D", times = "${9 * 60}", from = day + 1, created = at(day, 10))
         val pings = Plan.of(Book(emptyList(), listOf(m), emptyList(), emptyList(), s, at(day, 10)), s)

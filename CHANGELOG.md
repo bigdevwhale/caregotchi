@@ -6,6 +6,15 @@ line "<!-- tg", then 2-4 short lines in Russian for users (what is new, what is 
 then close it like any HTML comment. The release notes carry it, and the chat bot posts those lines.
 -->
 
+## [1.4.4] - 2026-11-26
+
+### Fixed
+- **No more «medicine time» half a day early (#26).** An alarm that came at the wrong hour – a time zone that flipped, or the system letting it out early or holding it back – said the 20:00 doses at half past eleven. A reminder now checks the phone's own clock: it speaks only of what is due within five minutes or overdue by three hours at most.
+
+<!-- tg
+Напоминания о лекарствах больше не приходят за полдня до приёма: если система разбудит приложение не вовремя, лишнего оно не скажет
+-->
+
 ## [1.4.3] - 2026-11-25
 
 ### Added

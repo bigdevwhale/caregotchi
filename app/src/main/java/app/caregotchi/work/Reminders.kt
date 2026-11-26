@@ -93,7 +93,7 @@ class RemindReceiver : BroadcastReceiver() {
         val at = intent.getLongExtra("at", System.currentTimeMillis()); val min = minuteOf(at)
         val b = c.book(s)
         val pet = c.dao.petList().firstOrNull { it.home }?.name ?: tr("Заботогочи", "Caregotchi")
-        val pings = Plan.of(b, s).filter { abs(it.at - at) < 60_000 }
+        val pings = Plan.due(b, s, at)
         val d = b.todayCare
         val eatPI = PendingIntent.getBroadcast(ctx, 7, Intent(ctx, ActionReceiver::class.java).putExtra("act", "eat"), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val waterPI = PendingIntent.getBroadcast(ctx, 8, Intent(ctx, ActionReceiver::class.java).putExtra("act", "water"), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
