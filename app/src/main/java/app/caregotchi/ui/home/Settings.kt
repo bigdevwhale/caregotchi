@@ -126,7 +126,7 @@ object Start0 { var section: String? = null }
 private fun KeeperCard(d: Data, onClick: () -> Unit) {
     val pet = d.pet
     Box(Modifier.fillMaxWidth().height(118.dp).shadow(4.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick)) {
-        Art("room_bg", Modifier.fillMaxSize(), ContentScale.Crop)
+        Art(app.caregotchi.domain.Shop.roomPic(d.s), Modifier.fillMaxSize(), ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xEE2A1C14), Color(0x662A1C14), Color.Transparent))))
         Row(Modifier.fillMaxSize().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -230,7 +230,7 @@ private fun Section(id: String, d: Data, nav: Nav, back: () -> Unit) {
                         Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).border(if (s.theme == t) 3.dp else 1.dp, if (s.theme == t) C.honey else C.line, RoundedCornerShape(14.dp))
                             .clickable { set { it.copy(theme = t) } }, horizontalAlignment = Alignment.CenterHorizontally) {
                             Box(Modifier.fillMaxWidth().aspectRatio(.8f)) {
-                                Art("room_bg", Modifier.fillMaxSize(), ContentScale.Crop)
+                                Art(app.caregotchi.domain.Shop.roomPic(d.s), Modifier.fillMaxSize(), ContentScale.Crop)
                                 when (t) {
                                     "dark" -> Box(Modifier.fillMaxSize().background(Color(0x99140A20)))
                                     "system" -> Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Transparent, .5f to Color.Transparent, .5f to Color(0x99140A20), 1f to Color(0x99140A20))))

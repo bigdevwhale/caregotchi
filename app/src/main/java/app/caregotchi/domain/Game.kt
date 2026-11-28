@@ -200,7 +200,21 @@ object Shop {
         Item("egg", "Загадочное яйцо", "Mystery egg", 300, 5, special = true, icon = "icon_hatch"),
         Item("chest", "Сундучок с сюрпризом", "Surprise chest", 120, 3, special = true, icon = "icon_chest"),
     )
-    val byId = (cozy + special).associateBy { it.id }
+    /**
+     * Other rooms for the hollow (#25): the same layout, so every bought thing keeps its place, in another mood.
+     * The first room is everyone's; the rest are bought once and then moved into at will.
+     */
+    val home = Item("room", "Дупло", "The hollow", 0, icon = "room_bg")
+    val rooms = listOf(
+        Item("room_spring", "Весеннее дупло", "Spring hollow", 250, 3, icon = "room_spring"),
+        Item("room_winter", "Зимнее дупло", "Winter hollow", 250, 4, icon = "room_winter"),
+        Item("room_burrow", "Нора под корнями", "Burrow under the roots", 350, 6, icon = "room_burrow"),
+        Item("room_attic", "Чердак под звёздами", "Starry attic", 400, 8, icon = "room_attic"),
+    )
+    fun isRoom(id: String) = id == home.id || rooms.any { it.id == id }
+    /** The picture of the room the hollow looks like now. */
+    fun roomPic(s: Settings) = rooms.firstOrNull { it.id == s.room && it.id in s.items }?.icon ?: "room_bg"
+    val byId = (cozy + special + rooms + home).associateBy { it.id }
 }
 
 /** What a weekly chest gives. */

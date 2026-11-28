@@ -133,14 +133,16 @@ private fun Room(d: Data, act: Act, modifier: Modifier, nav: Nav) {
     val s = d.s
     BoxWithConstraints(modifier) {
         val w = maxWidth; val h = maxHeight
-        Art("room_bg", Modifier.fillMaxSize(), ContentScale.FillBounds)
+        Art(Shop.roomPic(s), Modifier.fillMaxSize(), ContentScale.FillBounds)
         // the bought things, back to front
         for (it in Shop.cozy.filter { it.id in s.items && it.id !in s.hidden }.sortedBy { it.y }) {
             // the height follows the picture's own shape: with the width alone a wide picture (the garland, #17) kept its
             // pixel height and was shrunk to a fifth of the room
-            val id = app.caregotchi.ui.components.resId("item_${it.id}")
+            // the room's own pixel version (#25): the fine picture is for the shop
+            val pic = "room_item_${it.id}"
+            val id = app.caregotchi.ui.components.resId(pic)
             val ratio = if (id == 0) 1f else androidx.compose.ui.graphics.ImageBitmap.imageResource(id).let { b -> b.width.toFloat() / b.height }
-            Art("item_${it.id}", Modifier.offset(w * it.x, h * it.y).width(w * it.w).aspectRatio(ratio))
+            Art(pic, Modifier.offset(w * it.x, h * it.y).width(w * it.w).aspectRatio(ratio))
         }
         // one pot a regular medicine on the sill
         val pots = d.activeMeds.filter { !it.asNeeded }.take(4)
@@ -274,8 +276,8 @@ private fun Corners(d: Data, nav: Nav, modifier: Modifier) {
     Row(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.Bottom) {
         Corner("icon_scroll", "$done/${d.quests.size}") { nav.sheet = "quests" }
         Spacer(Modifier.weight(1f))
-        if (d.open != null) Row(Modifier.clip(RoundedCornerShape(50)).background(Color(0xFF3A1D18)).clickable { nav.dark = d.open.id }.padding(horizontal = 14.dp, vertical = 8.dp)) {
-            Text(openLabel(d.open), style = T.smallB.copy(color = Color(0xFFE8B0A5)))
+        if (d.open != null) Row(Modifier.clip(RoundedCornerShape(50)).background(Color(0xFF3A1D18)).clickable { if (d.opens.size > 1) nav.sheet = "bad" else nav.dark = d.open.id }.padding(horizontal = 14.dp, vertical = 8.dp)) {
+            Text(if (d.opens.size > 1) opensLabel(d) else openLabel(d.open), style = T.smallB.copy(color = Color(0xFFE8B0A5)))
         }
         Spacer(Modifier.weight(1f))
         Corner("icon_chest", if (d.s.chestWeek == monday) "✓" else "$good/5", Modifier.graphicsLayer { rotationZ = if (ready && !BuildConfig.SHOTS) wig * 6f else 0f }) { nav.sheet = "chest" }
@@ -329,10 +331,10 @@ private fun Panel(d: Data, nav: Nav, onEat: () -> Unit, onWater: () -> Unit, onP
                 Art("drink_coffee", Modifier.size(30.dp)); Spacer(Modifier.width(4.dp))
                 Text(if (mg > 0) tr("$mg мг", "$mg mg") else tr("Кофе", "Coffee"), style = T.smallB.copy(color = if (mg > 400) C.bad else C.ink))
             }
-            Row(Modifier.weight(1f).lip(C.badSoft, lerpDark(C.badSoft)).clickable { if (d.open != null) nav.dark = d.open.id else nav.sheet = "bad" }.padding(vertical = 9.dp),
+            Row(Modifier.weight(1f).lip(C.badSoft, lerpDark(C.badSoft)).clickable { nav.sheet = "bad" }.padding(vertical = 9.dp),
                 horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 Art("icon_heart", Modifier.size(26.dp)); Spacer(Modifier.width(8.dp))
-                Text(if (d.open != null) openLabel(d.open) + tr(" · открыть", " · open") else tr("Мне плохо", "I feel bad"), style = T.btn.copy(color = C.bad), maxLines = 1)
+                Text(if (d.opens.size > 1) opensLabel(d) else if (d.open != null) openLabel(d.open) else tr("Мне плохо", "I feel bad"), style = T.btn.copy(color = C.bad), maxLines = 1)
             }
         }
     }
@@ -350,6 +352,9 @@ private fun androidx.compose.foundation.layout.RowScope.QuickBtn(icon: String, l
 
 
 /** «Мигрень · идёт 8 ч»: what the open bad spell is and how long it has lasted. */
+/** Several spells at once (#27): «Мигрень и ещё 1». */
+fun opensLabel(d: Data): String = app.caregotchi.domain.Troubles.title(d.opens.first().kind) + tr(" и ещё ${d.opens.size - 1}", " and ${d.opens.size - 1} more")
+
 fun openLabel(a: app.caregotchi.data.Attack): String {
     val sec = ((System.currentTimeMillis() - a.start) / 1000).toInt()
     val long = if (sec >= 3600) tr("${sec / 3600} ч", "${sec / 3600} h") else dur(sec)

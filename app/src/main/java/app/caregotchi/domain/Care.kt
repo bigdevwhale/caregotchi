@@ -98,7 +98,7 @@ class Book(
         val created = if (m.created > 0) dayOf(m.created) else Long.MIN_VALUE
         val from = max(m.from, created)
         if (day < from || (m.until > 0 && day > m.until) || m.halvesOn(day) == 0) return emptyList()
-        val t = m.timeList()
+        val t = m.timesOn(day)
         return if (day == today) t.filter { it <= nowMin } else t
     }
 

@@ -53,6 +53,7 @@ data class Settings(
     val outside: String = "",
     val warnedDay: Long = 0,                     // the last day the pressure warning was shown
     val letterWeek: Long = 0,                    // the Monday of the last letter read
+    val room: String = "",                       // the room the hollow looks like (#25): "" the first one, else a bought room_*
 ) {
     fun json(): JSONObject = JSONObject().apply {
         fun arr(c: Collection<Any>) = JSONArray(c.toList())
@@ -62,7 +63,7 @@ data class Settings(
         put("clues", JSONObject(clues as Map<*, *>)); put("theme", theme); put("fem", fem); put("strict", strict); put("waterGoal", waterGoal); put("sleepGoal", sleepGoal); put("moveGoal", moveGoal)
         put("bedtime", bedtime); put("wake", wake); put("remindMeds", remindMeds); put("remindMeals", remindMeals); put("mealTimes", arr(mealTimes)); put("remindWater", remindWater); put("remindBed", remindBed); put("remindBp", remindBp); put("bpTimes", arr(bpTimes))
         put("reliefAsk", reliefAsk); put("pressureWarn", pressureWarn); put("cycle", cycle); put("kinds", arr(kinds))
-        put("town", town); if (!lat.isNaN()) { put("lat", lat); put("lon", lon) }; put("guessed", guessed); put("outside", outside); put("warnedDay", warnedDay); put("letterWeek", letterWeek)
+        put("town", town); if (!lat.isNaN()) { put("lat", lat); put("lon", lon) }; put("guessed", guessed); put("outside", outside); put("warnedDay", warnedDay); put("letterWeek", letterWeek); put("room", room)
     }
 
     companion object {
@@ -80,7 +81,7 @@ data class Settings(
                 remindMeds = j.optBoolean("remindMeds", true), remindMeals = j.optBoolean("remindMeals"), mealTimes = if (j.has("mealTimes")) list("mealTimes").mapNotNull { it.toIntOrNull() }.ifEmpty { d.mealTimes } else d.mealTimes, remindWater = j.optBoolean("remindWater"), remindBed = j.optBoolean("remindBed"), remindBp = j.optBoolean("remindBp"), bpTimes = if (j.has("bpTimes")) list("bpTimes").mapNotNull { it.toIntOrNull() } else d.bpTimes,
                 reliefAsk = j.optBoolean("reliefAsk", true), pressureWarn = j.optBoolean("pressureWarn", true), cycle = j.optBoolean("cycle"), kinds = list("kinds"),
                 town = j.optString("town"), lat = j.optDouble("lat", Double.NaN), lon = j.optDouble("lon", Double.NaN), guessed = j.optBoolean("guessed"), outside = j.optString("outside"),
-                warnedDay = j.optLong("warnedDay"), letterWeek = j.optLong("letterWeek"))
+                warnedDay = j.optLong("warnedDay"), letterWeek = j.optLong("letterWeek"), room = j.optString("room"))
         }
     }
 }

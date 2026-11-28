@@ -67,6 +67,11 @@ data class Med(
     @androidx.room.ColumnInfo(defaultValue = "30") val gap: Int = 30,
     @androidx.room.ColumnInfo(defaultValue = "") val meals: String = "",
     @androidx.room.ColumnInfo(defaultValue = "") val pattern: String = "",
+    /**
+     * Earlier schedules (#28), «day:480;day:480,1200»: each one's [times] held on the days before its day (and from the
+     * previous entry's day). A change of times counts from the day it was made, so the past keeps the doses it had.
+     */
+    @androidx.room.ColumnInfo(defaultValue = "") val past: String = "",
 ) {
     companion object {
         /** Whole days [stock] halves of [m] last from [day] at its schedule and cycle; null when it takes none. */
@@ -80,6 +85,37 @@ data class Med(
     }
 
     fun timeList(): List<Int> = times.split(',').mapNotNull { it.trim().toIntOrNull() }.sorted()
+
+    private fun pastList(): List<Pair<Long, List<Int>>> = past.split(';').mapNotNull { e ->
+        val d = e.substringBefore(':', "").trim().toLongOrNull() ?: return@mapNotNull null
+        d to e.substringAfter(':').split(',').mapNotNull { it.trim().toIntOrNull() }.sorted()
+    }.sortedBy { it.first }
+
+    /** The times the schedule had on [day] (#28): an earlier one for days before a change, else today's. */
+    fun timesOn(day: Long): List<Int> = pastList().firstOrNull { day < it.first }?.second ?: timeList()
+
+    /**
+     * One repair for schedules changed before 1.4.5 (#28): a dose first marked three or more days after the medicine's
+     * first marked dose was added later, so the days before it don't ask for it. [firstBySlot]: each time's first marked day.
+     */
+    fun guessPast(firstBySlot: Map<Int, Long>): Med {
+        if (past.isNotBlank() || timeList().size < 2) return this
+        val t = timeList(); val base = firstBySlot.values.minOrNull() ?: return this
+        val later = t.filter { (firstBySlot[it] ?: return this) >= base + 3 }
+        if (later.isEmpty() || later.size == t.size) return this
+        val days = later.map { firstBySlot.getValue(it) }.distinct().sorted()
+        return copy(past = days.joinToString(";") { d -> "$d:" + t.filter { (firstBySlot[it] ?: Long.MAX_VALUE) < d }.joinToString(",") })
+    }
+
+    /** This medicine with new [times] from [today] on: the old ones stay for the days before (once a day: the day's first). */
+    fun withTimes(times: String, today: Long): Med {
+        val new = times.split(',').mapNotNull { it.trim().toIntOrNull() }.sorted()
+        if (new == timeList() || id == 0L) return copy(times = times)
+        val keep = pastList().filter { it.first < today }
+        val prev = pastList().firstOrNull { it.first == today }?.second ?: timeList()
+        val hist = keep + (today to prev)
+        return copy(times = times, past = hist.joinToString(";") { (d, t) -> "$d:" + t.joinToString(",") })
+    }
     val asNeeded get() = times.isBlank()
     fun patternList(): List<Int> = pattern.split(',').mapNotNull { it.trim().toIntOrNull() }
     /** Which day of the cycle [from] was («2,2,1,@1»: the course began on its second day), so the days keep the numbers the user gave them. */
@@ -196,8 +232,8 @@ interface Dao0 {
     @Query("DELETE FROM Air") suspend fun clearAir()
 }
 
-@Database(entities = [Mark::class, Med::class, Attack::class, Pet::class, Air::class], version = 5, exportSchema = true,
-    autoMigrations = [androidx.room.AutoMigration(from = 1, to = 2), androidx.room.AutoMigration(from = 2, to = 3), androidx.room.AutoMigration(from = 4, to = 5)])
+@Database(entities = [Mark::class, Med::class, Attack::class, Pet::class, Air::class], version = 6, exportSchema = true,
+    autoMigrations = [androidx.room.AutoMigration(from = 1, to = 2), androidx.room.AutoMigration(from = 2, to = 3), androidx.room.AutoMigration(from = 4, to = 5), androidx.room.AutoMigration(from = 5, to = 6)])
 abstract class Db : RoomDatabase() {
     abstract fun dao(): Dao0
 

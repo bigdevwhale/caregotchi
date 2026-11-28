@@ -104,7 +104,9 @@ class Data(val s: Settings, val marks: List<Mark>, val meds: List<Med>, val atta
     val stage = pet?.let { Stage.of(it.xp) } ?: 0
     val activeMeds = meds.filter { !it.archived }
     val quests = (if (s.questDay == today()) s.quests else Quests.deal(today(), activeMeds.any { !it.asNeeded })).mapNotNull { Quests.byId[it] }
-    val open = attacks.firstOrNull { it.kind != app.caregotchi.domain.PERIOD && it.end == 0L && System.currentTimeMillis() - it.start < 3 * 86_400_000L }
+    /** Bad spells going on now: several at once (#27) – pressure and a racing heart may start together and ease apart. */
+    val opens = attacks.filter { it.kind != app.caregotchi.domain.PERIOD && it.end == 0L && System.currentTimeMillis() - it.start < 3 * 86_400_000L }.sortedBy { it.start }
+    val open = opens.firstOrNull()
 }
 
 @Composable

@@ -220,6 +220,28 @@ for _k, _s in {
     OTHER[_k] = BANNER.format(scene=_s)
 
 
+# More rooms for the shop (#25): the same layout as art/sheets/room.png (attached), another mood. The bought things
+# sit at fixed places of that picture, so the window, the windowsill, the rug, the floor and the furniture stay put.
+ROOM_LAYOUT = """Use your image generation tool to create ONE image. Do nothing else (no file copying).
+
+The attached image is the room of a cozy self-care tamagotchi app. Redraw THE SAME ROOM with EXACTLY the same layout,
+camera, proportions and 2:3 portrait frame: the round window in the same place and size, the same empty wide windowsill
+under it, the medicine cabinet upper left, the stove with a kettle and the little round table with a stool on the left,
+the bed with a pillow and the bedside table with a candle and a jug on the right, the big round rug in the middle of the
+floor, the wooden floor boards in the same perspective. Keep the free space on the rug and the windowsill empty.
+""" + STYLE + """
+Change only the mood, colours and small details: {mood}
+IMPORTANT: no people, no animals, no text, no letters, nothing new standing on the rug or the windowsill."""
+ROOMS = {
+    "room_winter": "a winter hollow: snow falling and snowy fir branches through the round window, frost on the window edges, a knitted blanket and woollen socks on the bed, a warm glow from the stove, cool blue-and-honey light",
+    "room_spring": "a spring hollow: blossoming apple branches and a pale green spring sky through the window, little flowers growing out of the wood in the corners, a light linen quilt with a floral pattern, fresh morning light",
+    "room_burrow": "a stone burrow under the roots: walls of rounded grey-beige stones with roots coming through the ceiling, the round window looks out at a mossy garden at ground level, a wool quilt in sage and rust, lamplight",
+    "room_attic": "a night attic under the stars: deep indigo walls with a painted pattern of little stars, the round window shows a starry night sky and a crescent moon, a dark blue quilt with stars, a soft candle glow",
+}
+for _k, _m in ROOMS.items():
+    OTHER[_k] = ROOM_LAYOUT.format(mood=_m)
+
+
 def image_of(output):
     m = re.search(r"session id:\s*([0-9a-f-]+)", output)
     if not m:
@@ -233,8 +255,9 @@ def run(name, prompt):
     if dst.exists():
         print("skip", name)
         return
+    ref = ["-i", str(OUT / "room.png")] if name in ROOMS else []
     r = subprocess.run([shutil.which("codex.cmd") or shutil.which("codex") or "codex", "exec", "--skip-git-repo-check",
-                        "--sandbox", "read-only", "-"],
+                        "--sandbox", "read-only", *ref, "-"],
                        input=prompt, text=True, encoding="utf-8", capture_output=True, cwd=str(ROOT))
     p = image_of(r.stdout + r.stderr)
     if p is None:

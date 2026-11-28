@@ -26,6 +26,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -67,33 +68,42 @@ fun ShopScreen(d: Data, nav: Nav) {
         }
         Column(Modifier.padding(horizontal = 14.dp)) {
             Spacer(Modifier.height(6.dp))
-            Segments(listOf(tr("Уют", "Cozy"), tr("Особое", "Special"), tr("В дупле", "In the hollow")), tab) { tab = it }
+            Segments(listOf(tr("Уют", "Cozy"), tr("Комнаты", "Rooms"), tr("Особое", "Special"), tr("В дупле", "In the hollow")), tab) { tab = it }
             Spacer(Modifier.height(10.dp))
-            val items = when (tab) { 0 -> Shop.cozy.filter { it.id !in d.s.items }; 1 -> Shop.special; else -> Shop.cozy.filter { it.id in d.s.items } }
-            if (items.isEmpty()) Text(if (tab == 2) tr("Пока ничего не куплено.", "Nothing bought yet.") else tr("Всё уже куплено – дупло полное!", "All bought – the hollow is full!"), style = T.small, modifier = Modifier.padding(vertical = 18.dp))
+            // other rooms with the same layout (#25): bought things keep their places in each
+            val items = when (tab) { 0 -> Shop.cozy.filter { it.id !in d.s.items }; 1 -> listOf(Shop.home) + Shop.rooms; 2 -> Shop.special; else -> Shop.cozy.filter { it.id in d.s.items } }
+            if (tab == 1) Text(tr("Та же обстановка, другое настроение. Все вещи переезжают вместе с вами.", "The same layout, another mood. All your things move with you."), style = T.small, modifier = Modifier.padding(bottom = 8.dp))
+            if (items.isEmpty()) Text(if (tab == 3) tr("Пока ничего не куплено.", "Nothing bought yet.") else tr("Всё уже куплено – дупло полное!", "All bought – the hollow is full!"), style = T.small, modifier = Modifier.padding(vertical = 18.dp))
             items.chunked(3).forEach { row ->
                 Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     row.forEach { it -> Tile(it, d, lvl, Modifier.weight(1f)) { pick = it } }
                     repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
-            if (tab == 1) Text(tr("Пледов в запасе: ${d.s.plaids}. Плед сам укроет день без отметок, чтобы серия не порвалась.", "Blankets in store: ${d.s.plaids}. A blanket covers a day without marks so the streak holds."), style = T.small)
+            if (tab == 2) Text(tr("Пледов в запасе: ${d.s.plaids}. Плед сам укроет день без отметок, чтобы серия не порвалась.", "Blankets in store: ${d.s.plaids}. A blanket covers a day without marks so the streak holds."), style = T.small)
             Spacer(Modifier.height(16.dp))
         }
     }
     pick?.let { it ->
-        val owned = it.id in d.s.items && !it.special
+        val owned = (it.id in d.s.items || it.id == Shop.home.id) && !it.special
+        val room = Shop.isRoom(it.id)
         Sheet({ pick = null }) {
-            Box(Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(16.dp)).background(Brush.radialGradient(listOf(Color(0xFFFFF3D6), C.bg))), contentAlignment = Alignment.Center) {
+            if (room) Box(Modifier.fillMaxWidth().height(260.dp).clip(RoundedCornerShape(16.dp))) { Art(it.picture, Modifier.fillMaxSize(), ContentScale.Crop) }
+            else Box(Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(16.dp)).background(Brush.radialGradient(listOf(Color(0xFFFFF3D6), C.bg))), contentAlignment = Alignment.Center) {
                 Art(it.picture, Modifier.size(120.dp))
             }
             Text(it.title, style = T.h2, modifier = Modifier.padding(top = 8.dp))
             Text(when { it.id == "plaid" -> tr("Укроет день, когда некогда было отмечаться. Серия не порвётся.", "Covers a day you had no time to mark. The streak won't break.")
                 it.id == "egg" -> tr("Яйцо случайного жильца, которого у вас ещё нет.", "An egg of a random pet you don't have yet.")
                 it.id == "chest" -> tr("Листики, а может, вещь для дупла или плед.", "Leaves, maybe a thing for the hollow or a blanket.")
+                room && Shop.roomPic(d.s) == it.picture -> tr("Вы живёте здесь.", "You live here.")
+                room && owned -> tr("Уже ваша – можно переехать в любой момент.", "Yours already – move in any time.")
+                room -> tr("Переедете сразу после покупки, а вернуться в старую комнату можно в любой момент.", "You move in as soon as it's bought, and can go back to the old room any time.")
                 owned -> tr("Стоит в дупле.", "Stands in the hollow.")
                 else -> tr("Встанет в дупле – питомец будет рад.", "It will stand in the hollow – the pet will be glad.") }, style = T.small)
             when {
+                room && owned && Shop.roomPic(d.s) == it.picture -> {}
+                room && owned -> Btn(tr("Переехать сюда", "Move in"), Modifier.fillMaxWidth().padding(top = 14.dp)) { scope.launch { c.moveTo(it.id) }; pick = null; nav.tab = 2 }
                 owned -> Ghost(if (it.id in d.s.hidden) tr("Поставить обратно", "Put it back") else tr("Убрать в чулан", "Put it away"), Modifier.fillMaxWidth().padding(top = 14.dp)) { scope.launch { c.toggleItem(it.id) }; pick = null }
                 lvl < it.level -> Text(tr("Откроется на ${it.level} уровне.", "Opens at level ${it.level}."), style = T.bodyB, modifier = Modifier.padding(top = 14.dp))
                 else -> Btn(tr("Купить за ${it.price}", "Buy for ${it.price}"), Modifier.fillMaxWidth().padding(top = 14.dp), enabled = d.s.leaves >= it.price, icon = "icon_leaf") {
@@ -107,12 +117,15 @@ fun ShopScreen(d: Data, nav: Nav) {
 @Composable
 private fun Tile(it: Item, d: Data, lvl: Int, modifier: Modifier, onClick: () -> Unit) {
     val locked = lvl < it.level
-    val owned = it.id in d.s.items && !it.special
+    val owned = (it.id in d.s.items || it.id == Shop.home.id) && !it.special
+    val room = Shop.isRoom(it.id)
     Column(modifier.lip(if (owned) C.okSoft else C.card2, lerp(if (owned) C.okSoft else C.card2, Color.Black, .12f), 14.dp).clickable(onClick = onClick).padding(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
-        Art(it.picture, Modifier.size(64.dp), alpha = if (locked) .45f else 1f, tint = if (locked) app.caregotchi.ui.components.grey else null)
+        if (room) Box(Modifier.size(width = 64.dp, height = 84.dp).clip(RoundedCornerShape(10.dp))) { Art(it.picture, Modifier.fillMaxSize(), ContentScale.Crop, alpha = if (locked) .45f else 1f) }
+        else Art(it.picture, Modifier.size(64.dp), alpha = if (locked) .45f else 1f, tint = if (locked) app.caregotchi.ui.components.grey else null)
         Text(it.title, style = T.tiny.copy(color = C.ink), textAlign = TextAlign.Center, maxLines = 2, modifier = Modifier.height(30.dp).padding(top = 2.dp))
         when {
+            room && owned -> Text(if (Shop.roomPic(d.s) == it.picture) tr("вы здесь", "you live here") else tr("ваша", "yours"), style = T.tiny.copy(color = C.sage))
             owned -> Text(if (it.id in d.s.hidden) tr("в чулане", "put away") else tr("в дупле", "in the hollow"), style = T.tiny.copy(color = C.sage))
             locked -> Row(verticalAlignment = Alignment.CenterVertically) { Art("icon_lock", Modifier.size(14.dp)); Text(tr(" ${it.level} ур.", " lvl ${it.level}"), style = T.tiny) }
             else -> Leaves(it.price, size = 18.dp)

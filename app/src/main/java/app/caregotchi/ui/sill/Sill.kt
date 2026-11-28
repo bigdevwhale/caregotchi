@@ -136,7 +136,7 @@ private fun Pillbox(d: Data) {
     val c = LocalContext.current.container
     val scope = rememberCoroutineScope()
     val monday = weekStart(today())
-    val times = d.activeMeds.filter { !it.asNeeded && it.from <= monday + 6 }.flatMap { it.timeList() }.distinct().sorted().take(4)
+    val times = d.activeMeds.filter { !it.asNeeded && it.from <= monday + 6 }.flatMap { m -> (0..6).flatMap { m.timesOn(monday + it) } }.distinct().sorted().take(4)
     var due = 0; var took = 0
     val lid = Brush.verticalGradient(listOf(Color(0xFFC9A8DC), Color(0xFFB38FCA)))
     Column(Modifier.padding(top = 18.dp).fillMaxWidth().shadow(3.dp, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp))
@@ -144,7 +144,7 @@ private fun Pillbox(d: Data) {
         val rows = times.map { t ->
             t to (0..6).map { i ->
                 val day = monday + i
-                val ms = d.activeMeds.filter { m -> !m.asNeeded && t in m.timeList() && day >= m.from && (m.until == 0L || day <= m.until) && m.halvesOn(day) > 0 }
+                val ms = d.activeMeds.filter { m -> !m.asNeeded && t in m.timesOn(day) && day >= m.from && (m.until == 0L || day <= m.until) && m.halvesOn(day) > 0 }
                 val done = ms.count { m -> d.book.marksOn(day).any { it.kind == "pill" && it.med == m.id && it.slot == t } }
                 if (day < today() || (day == today() && t <= d.book.nowMin)) { due += ms.size; took += done }
                 Triple(day, ms, done)

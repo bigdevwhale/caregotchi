@@ -6,6 +6,23 @@ line "<!-- tg", then 2-4 short lines in Russian for users (what is new, what is 
 then close it like any HTML comment. The release notes carry it, and the chat bot posts those lines.
 -->
 
+## [1.5.0] - 2026-11-28
+
+### Added
+- **Other rooms (#25).** A «Rooms» tab in Badger's shop: a spring hollow, a winter hollow, a burrow under the roots and a starry attic, each with the same layout, so every bought thing keeps its place. You move in when you buy one and can go back to any room you own at any time.
+- **Several bad spells at once (#27).** «I feel bad» shows what is going on now and lets another one start beside it – pressure and a racing heart can begin together and ease apart, each with its own medicine and its own «eased».
+
+### Fixed
+- **A changed schedule no longer rewrites the past (#28).** A second daily dose added to a medicine showed up as missed on every earlier day and wilted its pot. A change of times now counts from the day it was made; the days before keep the doses they had. Schedules changed before this version are guessed once from the marks: a dose first taken days after the others was added then.
+- **Bought things fit the room (#25).** They were drawn finer and brighter than the hollow and stood without a shadow. In the room they are now on its own pixel grid, a little muted to its lamplight, with a shadow under the ones on the floor; the shop keeps the fine pictures.
+
+<!-- tg
+В лавке появились комнаты: весеннее и зимнее дупло, нора под корнями и чердак под звёздами. Все вещи переезжают вместе с вами
+Можно отметить сразу несколько «мне плохо», например давление и тахикардию, и у каждого своё лекарство
+Если поменять схему приёма, прошлые дни больше не портятся: новое расписание действует с того дня, когда его изменили
+Купленные вещи больше не выделяются в комнате: они нарисованы в том же стиле и стоят с тенью
+-->
+
 ## [1.4.4] - 2026-11-26
 
 ### Fixed

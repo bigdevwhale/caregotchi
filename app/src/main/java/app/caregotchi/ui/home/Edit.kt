@@ -66,8 +66,8 @@ private fun kindTitle(kind: String) = when (kind) {
 }
 
 /** The scheduled time of [m]'s that fits [min] best (within three hours), or -1 for a dose outside the schedule. */
-private fun slotFor(m: app.caregotchi.data.Med, min: Int): Int =
-    m.timeList().minByOrNull { abs(it - min) }?.takeIf { abs(it - min) <= 180 } ?: -1
+private fun slotFor(m: app.caregotchi.data.Med, min: Int, day: Long): Int =
+    m.timesOn(day).minByOrNull { abs(it - min) }?.takeIf { abs(it - min) <= 180 } ?: -1
 
 /** A mark put right: when it was, and what exactly – the meal, the sport, the drink, the numbers, the medicine. Or taken away. */
 @OptIn(ExperimentalLayoutApi::class)
@@ -87,7 +87,7 @@ fun MarkSheet(id: Long, d: Data, nav: Nav) {
             }
         }
         Text(tr("Когда", "When"), style = T.sec, modifier = Modifier.padding(top = 14.dp, bottom = 6.dp))
-        WhenPicker(m.at) { at -> m = m.copy(at = at, slot = if (m.kind == "pill" && m.slot >= 0) d.meds.firstOrNull { it.id == m.med }?.let { slotFor(it, minuteOf(at)) } ?: m.slot else m.slot) }
+        WhenPicker(m.at) { at -> m = m.copy(at = at, slot = if (m.kind == "pill" && m.slot >= 0) d.meds.firstOrNull { it.id == m.med }?.let { slotFor(it, minuteOf(at), dayOf(at)) } ?: m.slot else m.slot) }
         when (m.kind) {
             "eat" -> {
                 Spacer(Modifier.height(12.dp))
@@ -123,12 +123,12 @@ fun MarkSheet(id: Long, d: Data, nav: Nav) {
             "pill" -> {
                 Text(tr("Что именно", "Which one"), style = T.sec, modifier = Modifier.padding(top = 14.dp, bottom = 6.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    d.meds.filter { !it.archived || it.id == m.med }.forEach { md -> Chip(md.name, md.id == m.med) { m = m.copy(med = md.id, slot = slotFor(md, minuteOf(m.at))) } }
+                    d.meds.filter { !it.archived || it.id == m.med }.forEach { md -> Chip(md.name, md.id == m.med) { m = m.copy(med = md.id, slot = slotFor(md, minuteOf(m.at), dayOf(m.at))) } }
                 }
                 d.meds.firstOrNull { it.id == m.med }?.takeIf { !it.asNeeded }?.let { md ->
                     Text(tr("По расписанию", "On the schedule"), style = T.sec, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        md.timeList().forEach { t -> Chip(hhmm(t), m.slot == t) { m = m.copy(slot = t) } }
+                        md.timesOn(dayOf(m.at)).forEach { t -> Chip(hhmm(t), m.slot == t) { m = m.copy(slot = t) } }
                         Chip(tr("Вне расписания", "Extra"), m.slot < 0) { m = m.copy(slot = -1) }
                     }
                 }
@@ -164,10 +164,10 @@ fun AddSheet(day: Long, d: Data, nav: Nav) {
             "pill" -> {
                 Text(tr("Какое лекарство", "Which medicine"), style = T.sec, modifier = Modifier.padding(bottom = 6.dp))
                 d.activeMeds.forEach { md ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { log("pill", med = md.id, slot = slotFor(md, min)) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { log("pill", med = md.id, slot = slotFor(md, min, dayOf(at))) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Art("pot_${md.herb}_1", Modifier.size(34.dp)); Spacer(Modifier.width(10.dp))
                         Text(md.name, style = T.bodyB, modifier = Modifier.weight(1f))
-                        Text(slotFor(md, min).takeIf { it >= 0 }?.let { hhmm(it) } ?: tr("вне расписания", "extra"), style = T.small)
+                        Text(slotFor(md, min, dayOf(at)).takeIf { it >= 0 }?.let { hhmm(it) } ?: tr("вне расписания", "extra"), style = T.small)
                     }
                 }
                 if (d.activeMeds.isEmpty()) Text(tr("Лекарств пока нет.", "No medicine yet."), style = T.small)

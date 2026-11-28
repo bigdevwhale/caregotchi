@@ -184,12 +184,29 @@ fun Sheets(d: Data, nav: Nav) {
             Ghost(tr("Добавить лекарство", "Add medicine"), Modifier.fillMaxWidth().padding(top = 10.dp)) { close(); nav.push(Screen.MedEdit(0)) }
         }
         sheet == "bad" -> Sheet(close) {
-            Text(tr("Что случилось?", "What's wrong?"), style = T.h2)
-            Text(tr("Запись – тоже забота. Питомец ничего не теряет.", "Writing it down is care too. The pet loses nothing."), style = T.small)
+            // what is going on now comes first; another one can start beside it (#27)
+            if (d.opens.isNotEmpty()) {
+                Text(tr("Сейчас", "Now"), style = T.h2)
+                d.opens.forEach { a ->
+                    val k = Troubles.kinds(d.s).firstOrNull { it.id == a.kind }
+                    Row(Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(16.dp)).background(Color(0x22C98B86))
+                        .clickable { close(); if (k?.dark == true) nav.dark = a.id else nav.push(Screen.AttackEdit(a.id)) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Art("icon_${k?.icon ?: "heart"}", Modifier.size(36.dp)); Spacer(Modifier.width(10.dp))
+                        Text(openLabel(a), style = T.bodyB, modifier = Modifier.weight(1f))
+                        Text(tr("открыть", "open"), style = T.smallB.copy(color = C.bad))
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+            Text(if (d.opens.isEmpty()) tr("Что случилось?", "What's wrong?") else tr("Что-то ещё?", "Something else too?"), style = T.h2)
+            Text(if (d.opens.isEmpty()) tr("Запись – тоже забота. Питомец ничего не теряет.", "Writing it down is care too. The pet loses nothing.")
+                else tr("Можно отметить сразу несколько: у каждого своё лекарство и своё «отпустило».", "Several can go at once: each with its own medicine and its own «eased»."), style = T.small)
             Spacer(Modifier.height(12.dp))
             val kinds = Troubles.kinds(d.s)
-            PicGrid(kinds, 3) { k, mod -> PicTile("icon_${k.icon}", k.title, false, mod, pic = 54.dp) {
-                if (k.id == "pressure") nav.sheet = "bp" else scope.launch { val id = c.startAttack(k.id); close(); if (k.dark) nav.dark = id else nav.push(Screen.AttackEdit(id)) } } }
+            PicGrid(kinds, 3) { k, mod -> PicTile("icon_${k.icon}", k.title, d.opens.any { it.kind == k.id }, mod, pic = 54.dp) {
+                val going = d.opens.firstOrNull { it.kind == k.id }
+                if (going != null) { close(); if (k.dark) nav.dark = going.id else nav.push(Screen.AttackEdit(going.id)) }
+                else if (k.id == "pressure") nav.sheet = "bp" else scope.launch { val id = c.startAttack(k.id); close(); if (k.dark) nav.dark = id else nav.push(Screen.AttackEdit(id)) } } }
             if (d.s.cycle) {
                 val p = d.book.periodNow
                 Row(Modifier.fillMaxWidth().padding(top = 12.dp).clip(RoundedCornerShape(16.dp)).background(Color(0x22C98B86)).border(1.dp, Color(0x55C98B86), RoundedCornerShape(16.dp))

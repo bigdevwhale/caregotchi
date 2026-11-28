@@ -236,7 +236,7 @@ private fun Forgot(day: Long, d: Data) {
     if (!t.dinner) items += F("icon_dinner", tr("Ужин", "Dinner")) { scope.launch { c.log("eat", "dinner", at = at(19 * 60)) } }
     items += F("icon_water", tr("Стакан воды", "Water")) { scope.launch { c.log("water", at = at(12 * 60)) } }
     items += F("icon_walk", tr("Прогулка 30 мин", "Walk 30 min")) { scope.launch { c.log("move", "walk", at = at(17 * 60), mins = 30) } }
-    d.activeMeds.filter { !it.asNeeded }.forEach { m -> m.timeList().forEach { tm -> if (d.book.marksOn(day).none { it.med == m.id && it.slot == tm } && d.book.dueOn(m, day).contains(tm))
+    d.activeMeds.filter { !it.asNeeded }.forEach { m -> m.timesOn(day).forEach { tm -> if (d.book.marksOn(day).none { it.med == m.id && it.slot == tm } && d.book.dueOn(m, day).contains(tm))
         items += F("pot_${m.herb}_2", "${m.name} ${hhmm(tm)}") { scope.launch { c.log("pill", med = m.id, slot = tm, at = at(tm)) } } } }
     if (items.isEmpty()) return
     Text(if (day == today()) tr("Ещё не отмечено", "Not marked yet") else tr("Забыли отметить?", "Forgot to mark?"), style = T.h3, modifier = Modifier.padding(top = 20.dp))

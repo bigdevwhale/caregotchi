@@ -168,7 +168,8 @@ class AppContainer(context: Context) {
         for (m in dao.medList()) if (m.food > 0 && m.meals.isNotBlank()) {
             val meals = m.mealList().map(remap).filter { it >= 0 }.distinct().sorted()
             val t = m.copy(meals = meals.joinToString(",")).timesFor(times)
-            dao.update(if (t.isEmpty()) m.copy(food = 0, meals = "") else m.copy(meals = meals.joinToString(","), times = t.joinToString(",")))
+            // new meal times move the doses from today on; the past keeps its own (#28)
+            dao.update(if (t.isEmpty()) m.copy(food = 0, meals = "") else m.copy(meals = meals.joinToString(",")).withTimes(t.joinToString(","), today()))
         }
         Reminders.schedule(app)
     }
@@ -183,7 +184,9 @@ class AppContainer(context: Context) {
     suspend fun saveMed(m0: Med): Long {
         val tied = if (m0.food > 0 && !m0.asNeeded) m0.timesFor(settings.now().mealTimes) else emptyList()
         val m = if (tied.isNotEmpty()) m0.copy(times = tied.joinToString(",")) else m0.copy(food = 0, meals = "")
-        val id = if (m.id == 0L) dao.insert(m.copy(created = System.currentTimeMillis())) else { dao.update(m); m.id }
+        // a changed schedule counts from today: the days before keep the doses they had (#28)
+        val old = if (m.id == 0L) null else dao.medList().firstOrNull { it.id == m.id }
+        val id = if (m.id == 0L) dao.insert(m.copy(created = System.currentTimeMillis())) else { dao.update(old?.withTimes(m.times, today())?.let { h -> m.copy(past = h.past) } ?: m); m.id }
         Reminders.schedule(app); return id
     }
 
@@ -200,7 +203,8 @@ class AppContainer(context: Context) {
                 settings.update { st -> st.copy(leaves = st.leaves - it.price, eggsSeen = st.eggsSeen + sp.id, inbox = st.inbox + "egg:${sp.id}") }
             }
             "chest" -> { settings.update { st -> st.copy(leaves = st.leaves - it.price) }; val l = Chest.roll(settings.now(), Level.of(s.xp).first); give(l); settings.update { st -> st.copy(inbox = st.inbox + "loot:${l.leaves}:${l.item.orEmpty()}:${l.plaid}") } }
-            else -> settings.update { st -> st.copy(leaves = st.leaves - it.price, items = st.items + id) }
+            // a bought room is moved into at once (#25)
+            else -> settings.update { st -> st.copy(leaves = st.leaves - it.price, items = st.items + id, room = if (Shop.isRoom(id)) id else st.room) }
         }
         settle(); true
     }
@@ -219,6 +223,8 @@ class AppContainer(context: Context) {
         give(l); settings.update { it.copy(chestWeek = monday) }; settle(); l
     }
 
+    /** Moves into a room already bought, or back into the first one (#25). */
+    suspend fun moveTo(id: String) = settings.update { it.copy(room = if (id == Shop.home.id || id !in it.items) "" else id) }
     suspend fun toggleItem(id: String) = settings.update { it.copy(hidden = if (id in it.hidden) it.hidden - id else it.hidden + id) }
     suspend fun clue(id: String, v: Int) { settings.update { it.copy(clues = it.clues + (id to v)) }; if (v > 0) { gain(5, 5); rewards.tryEmit(Reward(5, 5)) } }
     suspend fun setHome(p: Pet) { dao.updatePets(dao.petList().map { it.copy(home = it.id == p.id) }); Widget.refresh(app) }
@@ -226,6 +232,19 @@ class AppContainer(context: Context) {
     suspend fun seen(key: String) = settings.update { it.copy(inbox = it.inbox - key, seen = it.seen + key) }
 
     /** Daily housekeeping: the day's tasks, eggs that hatch after two good days, a blanket over a missed day, reminders, the weather. */
+    /** Once: schedules changed before the history was kept get it guessed from the marks (#28). */
+    suspend fun repairPast() {
+        if ("fix.past" in settings.now().seen) return
+        val pills = dao.markList().filter { it.kind == "pill" && it.slot >= 0 }
+        for (m in dao.medList()) {
+            val first = pills.filter { it.med == m.id }.groupBy { it.slot }.mapValues { (_, v) -> v.minOf { dayOf(it.at) } }
+            val g = m.guessPast(first)
+            if (g.past != m.past) dao.update(g)
+        }
+        settings.update { it.copy(seen = it.seen + "fix.past") }
+        Widget.refresh(app)
+    }
+
     suspend fun tick() = lock.withLock {
         val s = settings.now(); val t = today()
         val b = book(s)
@@ -277,7 +296,7 @@ class CaregotchiApp : Application() {
         super.onCreate()
         Lang.ru = resources.configuration.locales[0].language == "ru"
         container = AppContainer(this)
-        container.scope.launch(Dispatchers.Default) { Gender.fem = container.settings.now().fem }
+        container.scope.launch(Dispatchers.Default) { Gender.fem = container.settings.now().fem; container.repairPast() }
         Reminders.channels(this)
     }
 }

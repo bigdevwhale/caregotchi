@@ -5,6 +5,7 @@
 pets 3×3 → pet_<id>_<0..8> (baby, teen, adult, eat, drink, pill, cheer, sick, asleep);
 icons/icons2/items/badges 4×4, pots/pots2/eggs 4×3; banner_* → centre band 2.4:1; room → room_bg.
 The magenta background is keyed out; each frame is cropped to its picture.
+After cutting the items, run tools/pixel_items.py: the room draws them as room_item_* on its pixel grid (#25).
 """
 from pathlib import Path
 
@@ -97,10 +98,10 @@ def main():
         s = f.stem
         if only and s not in only:
             continue
-        if s == "room":
-            im = Image.open(f).convert("RGB")
+        if s == "room" or s.startswith("room_"):
+            im = Image.open(f).convert("RGB").resize((1024, 1536), Image.LANCZOS)
             im.thumbnail((900, 1350), Image.LANCZOS)
-            save(im, "room_bg", 88)
+            save(im, "room_bg" if s == "room" else s, 88)
         elif s.startswith("banner_"):
             im = Image.open(f).convert("RGB")
             w, h = im.size
